@@ -90,12 +90,12 @@ Evaluate:
 
 Goal: highlight countries that achieved **economic growth + emissions reduction**.
 
-**Method (define in Phase 2, before Phase 4 UI):**
+**Method (locked in Phase 2):** see [`SCORING.md`](SCORING.md) and `src/kaya_score.py`.
 
-- Fixed time window (e.g. 2000 → latest available), documented in the notebook
-- Prefer rates of change / trajectories over raw levels where fairer
-- Avoid punishing late developers solely for higher current intensity
-- Document scoring formulas so the leaderboard is reproducible
+- Window: **2000 → latest year ≥ 2018** (currently 2022)
+- Rates of change (not levels); clip-mapped to 0–100; weights **30 / 25 / 20 / 25**
+- Default eligibility: population ≥ 1e6 and CO₂ ≥ 5 Mt in 2000
+- Notebook: `notebooks/02_kaya_score.ipynb`
 
 ### 3. Climate Solution Game
 
@@ -167,19 +167,22 @@ Scripts in `src/`:
 | `clean_data.py` | ISO3 filter; harmonize; export `kaya_cleaned.csv` |
 | `calculate_kaya.py` | Compute Kaya variables; export `kaya_dataset.csv` |
 | `validate_kaya.py` | Phase 1b: coverage, units, identity, US spot-check |
+| `kaya_score.py` | Locked Kaya Champion score; optional `kaya_scores.csv` export |
+| `export_app_data.py` | Copy processed CSVs into `app/public/data/` |
 
-### Frontend (later)
+### Frontend
 
-- React + Vite
-- Default viz stack: **Plotly** (or Observable Plot) for charts; **Mapbox** or a lighter map lib for the world map
-- Add **D3** only if a custom decomposition viz needs it
+- React + Vite in `app/`
+- Default viz stack: **Plotly** for charts
+- Phase 3: Country explorer at `/country/:iso` (no game yet)
+- Sync data with `python src/export_app_data.py`
 
 Priority visuals:
 
-1. Kaya decomposition chart
-2. Country comparison chart
-3. Interactive world map
-4. Climate solution simulator
+1. Kaya factor index chart — **done** (explorer)
+2. CO₂ timeline — **done** (explorer)
+3. Interactive world map — later
+4. Climate solution simulator — Phase 5
 
 ## Scientific Requirements
 
@@ -197,9 +200,9 @@ Build in this order. Do **not** build animations before the data is validated.
 
 1. **Phase 1a** — Data pipeline (download / clean / merge / calculate)
 2. **Phase 1b** — Validate country concordance, units, missingness; spot-check known stories (e.g. US peak-and-decline)
-3. **Phase 2** — Notebook analyzing countries; lock Kaya Score method
-4. **Phase 3** — Interactive country explorer
-5. **Phase 4** — Leaderboard (Kaya Score)
+3. **Phase 2** — Notebook analyzing countries; lock Kaya Score method — **done** (`SCORING.md`, `src/kaya_score.py`, `notebooks/02_kaya_score.ipynb`)
+4. **Phase 3** — Interactive country explorer — **done** (`app/`)
+5. **Phase 4** — Leaderboard (Kaya Score) — must use locked `score_countries()`
 6. **Phase 5** — Game mechanics (satirical levers OK)
 7. **Phase 6** — Polish / design
 
