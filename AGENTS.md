@@ -145,13 +145,15 @@ Processed columns:
 
 - `country`
 - `year`
-- `co2`
+- `co2` (territorial)
+- `consumption_co2` (trade-adjusted; often missing)
 - `population`
 - `gdp` (total, PPP)
 - `gdp_per_capita`
 - `energy_consumption`
 - `energy_intensity` (= `energy_consumption / gdp`)
 - `carbon_intensity` (= `co2 / energy_consumption`)
+- `electricity_carbon_intensity` (Ember gCO₂e/kWh; may be missing)
 
 ## Technical Requirements
 
@@ -165,7 +167,8 @@ Scripts in `src/`:
 | --- | --- |
 | `download_data.py` | Retrieve datasets into `data/raw/` |
 | `clean_data.py` | ISO3 filter; harmonize; export `kaya_cleaned.csv` |
-| `calculate_kaya.py` | Compute Kaya variables; export `kaya_dataset.csv` |
+| `process_ember.py` | Extract Ember grid intensity → `ember_grid_intensity.csv` |
+| `calculate_kaya.py` | Compute Kaya variables; join Ember; export `kaya_dataset.csv` |
 | `validate_kaya.py` | Phase 1b: coverage, units, identity, US spot-check |
 | `kaya_score.py` | Locked Kaya Champion score; optional `kaya_scores.csv` export |
 | `export_app_data.py` | Copy processed CSVs into `app/public/data/` |
@@ -173,16 +176,34 @@ Scripts in `src/`:
 ### Frontend
 
 - React + Vite in `app/`
-- Default viz stack: **Plotly** for charts
-- Phase 3: Country explorer at `/country/:iso` (no game yet)
+- Default viz: lightweight SVG charts (Plotly dropped in Phase 6 for bundle size)
 - Sync data with `python src/export_app_data.py`
+
+Routes:
+
+| Path | Surface |
+| --- | --- |
+| `/` | Landing |
+| `/country/:iso` | Country explorer |
+| `/compare` | Side-by-side compare (`?a=&b=`) |
+| `/map` | World choropleth of Kaya scores |
+| `/rankings` | Leaderboard (locked `kaya_scores.csv`) |
+| `/battle/:iso` | Combat mini-game |
+| `/methods` | Data sources, scoring, limitations |
 
 Priority visuals:
 
 1. Kaya factor index chart — **done** (explorer)
 2. CO₂ timeline — **done** (explorer)
-3. Interactive world map — later
-4. Climate solution simulator — Phase 5
+3. Interactive world map — **done** (`/map`)
+4. Climate solution simulator — **done** (combat)
+
+### Combat contract (do not re-invent casually)
+
+- Seed intensity/carbon starting pressure from the country’s latest EI/CI vs peer medians.
+- BAU drift each turn; diminishing returns (max **3** uses per action).
+- Win: emissions pressure ≤ 60 vs start, prosperity ≥ 70, within 8 turns.
+- EV payoff uses Ember `electricity_carbon_intensity` when present.
 
 ## Scientific Requirements
 
@@ -202,14 +223,33 @@ Build in this order. Do **not** build animations before the data is validated.
 2. **Phase 1b** — Validate country concordance, units, missingness; spot-check known stories (e.g. US peak-and-decline)
 3. **Phase 2** — Notebook analyzing countries; lock Kaya Score method — **done** (`SCORING.md`, `src/kaya_score.py`, `notebooks/02_kaya_score.ipynb`)
 4. **Phase 3** — Interactive country explorer — **done** (`app/`)
-5. **Phase 4** — Leaderboard (Kaya Score) — must use locked `score_countries()`
-6. **Phase 5** — Game mechanics (satirical levers OK)
-7. **Phase 6** — Polish / design
+5. **Phase 4** — Leaderboard (Kaya Score) — **done** (`/rankings`, uses locked scores)
+6. **Phase 5** — Game mechanics — **done** (`/battle/:iso`)
+7. **Phase 6** — Polish / design — **done** (landing, methods, SVG charts, motion)
+
+## Project status
+
+**MVP shipped** (Phases 1–6 + post-phase polish). Demo CSVs live under `app/public/data/` for local `npm run dev` without re-running the full pipeline.
+
+### Shipped post-phase work
+
+- Country-seeded combat + BAU drift + diminishing returns
+- Historical compare after combat; action hover preview; run report + badges + scenario presets
+- Explorer log-decomposition chart; leaderboard “why this rank?”
+- Ember grid intensity + EV payoff
+- Country compare (`/compare`); consumption CO₂ toggle; world map (`/map`)
+
+### Future / out of scope (ask before starting)
+
+- Deploy target (GitHub Pages / static host) and CI
+- Tiny jurisdictions missing from 110m map outlines (e.g. HKG, SGP)
+- Deeper consumption-vs-territorial narrative beyond the explorer toggle
 
 ## Agent Working Rules
 
-- Prefer smallest change that advances the current phase.
+- Prefer smallest change that advances an **explicit** user request or agreed future item.
 - Do not invent data, citations, or causal claims.
 - Map every UI/game lever to an explicit Kaya variable when possible.
-- Keep empty data directories tracked with `.gitkeep`; ignore real data files via `.gitignore`.
-- Ask before expanding scope beyond the current phase.
+- Keep empty data directories tracked with `.gitkeep`; ignore real data files via `.gitignore` (demo CSVs under `app/public/data/` may be committed).
+- Ask before expanding scope into “Future / out of scope.”
+- Commit / push only when the user asks.

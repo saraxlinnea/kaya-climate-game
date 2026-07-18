@@ -27,6 +27,7 @@ CO2_COLUMNS = [
     "population",
     "gdp",
     "co2",
+    "consumption_co2",
     "primary_energy_consumption",
 ]
 
@@ -45,6 +46,7 @@ def load_co2() -> pd.DataFrame:
         columns={
             "gdp": "gdp",
             "co2": "co2",
+            "consumption_co2": "consumption_co2",
             "primary_energy_consumption": "energy_consumption",
         }
     )
@@ -86,6 +88,7 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
             "population",
             "gdp",
             "co2",
+            "consumption_co2",
             "energy_consumption",
         ]
     ]

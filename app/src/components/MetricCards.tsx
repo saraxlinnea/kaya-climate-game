@@ -16,7 +16,13 @@ export function MetricCards({ series }: Props) {
   const start = series[0]
   const end = series[series.length - 1]
 
-  const cards = [
+  const cards: {
+    label: string
+    value: string
+    pct: number
+    invertGood: boolean
+    sinceYear?: number
+  }[] = [
     {
       label: 'Population',
       value: formatCompact(end.population, 'people'),
@@ -49,6 +55,24 @@ export function MetricCards({ series }: Props) {
     },
   ]
 
+  const withGrid = series.filter(
+    (r) => r.electricity_carbon_intensity != null && Number.isFinite(r.electricity_carbon_intensity),
+  )
+  if (withGrid.length >= 2) {
+    const g0 = withGrid[0]
+    const g1 = withGrid[withGrid.length - 1]
+    cards.splice(4, 0, {
+      label: 'Grid intensity',
+      value: `${Number(g1.electricity_carbon_intensity).toFixed(0)} g/kWh`,
+      pct: pctChange(
+        Number(g0.electricity_carbon_intensity),
+        Number(g1.electricity_carbon_intensity),
+      ),
+      invertGood: true,
+      sinceYear: g0.year,
+    })
+  }
+
   return (
     <dl className="metrics">
       {cards.map((card) => (
@@ -57,7 +81,7 @@ export function MetricCards({ series }: Props) {
           <dd>
             {card.value}
             <span className={`delta ${deltaClass(card.pct, card.invertGood)}`}>
-              {formatPct(card.pct)} since {start.year}
+              {formatPct(card.pct)} since {card.sinceYear ?? start.year}
             </span>
           </dd>
         </div>

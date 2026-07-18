@@ -12,6 +12,9 @@ Units (from OWID):
     energy_intensity    TWh per international-$
     carbon_intensity    Mt CO2 per TWh
 
+Optional Ember join:
+    electricity_carbon_intensity  gCO2e/kWh (grid / power-sector intensity)
+
 Writes: data/processed/kaya_dataset.csv
 """
 
@@ -23,6 +26,7 @@ import pandas as pd
 
 PROCESSED_DIR = Path(__file__).resolve().parents[1] / "data" / "processed"
 INPUT_FILE = PROCESSED_DIR / "kaya_cleaned.csv"
+EMBER_FILE = PROCESSED_DIR / "ember_grid_intensity.csv"
 OUTPUT_FILE = PROCESSED_DIR / "kaya_dataset.csv"
 
 OUTPUT_COLUMNS = [
@@ -30,12 +34,14 @@ OUTPUT_COLUMNS = [
     "iso_code",
     "year",
     "co2",
+    "consumption_co2",
     "population",
     "gdp",
     "gdp_per_capita",
     "energy_consumption",
     "energy_intensity",
     "carbon_intensity",
+    "electricity_carbon_intensity",
 ]
 
 
@@ -44,7 +50,22 @@ def calculate(df: pd.DataFrame) -> pd.DataFrame:
     out["gdp_per_capita"] = out["gdp"] / out["population"]
     out["energy_intensity"] = out["energy_consumption"] / out["gdp"]
     out["carbon_intensity"] = out["co2"] / out["energy_consumption"]
-    return out[OUTPUT_COLUMNS].sort_values(["iso_code", "year"]).reset_index(drop=True)
+    return out
+
+
+def merge_ember(kaya: pd.DataFrame) -> pd.DataFrame:
+    if not EMBER_FILE.exists():
+        print(f"Warning: {EMBER_FILE} missing — electricity_carbon_intensity will be empty.")
+        print("  Run: python src/process_ember.py")
+        kaya = kaya.copy()
+        kaya["electricity_carbon_intensity"] = pd.NA
+        return kaya
+
+    ember = pd.read_csv(EMBER_FILE)
+    merged = kaya.merge(ember, on=["iso_code", "year"], how="left")
+    matched = merged["electricity_carbon_intensity"].notna().mean()
+    print(f"Ember grid intensity matched {matched:.0%} of Kaya rows.")
+    return merged
 
 
 def main() -> None:
@@ -55,6 +76,8 @@ def main() -> None:
 
     cleaned = pd.read_csv(INPUT_FILE)
     kaya = calculate(cleaned)
+    kaya = merge_ember(kaya)
+    kaya = kaya[OUTPUT_COLUMNS].sort_values(["iso_code", "year"]).reset_index(drop=True)
     kaya.to_csv(OUTPUT_FILE, index=False)
     print(
         f"Wrote {OUTPUT_FILE} "

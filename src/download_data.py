@@ -14,6 +14,10 @@ RAW_DIR = Path(__file__).resolve().parents[1] / "data" / "raw"
 DATASETS = {
     "owid-co2-data.csv": "https://owid-public.owid.io/data/co2/owid-co2-data.csv",
     "owid-energy-data.csv": "https://owid-public.owid.io/data/energy/owid-energy-data.csv",
+    "ember_yearly_electricity.csv": (
+        "https://files.ember-energy.org/public-downloads/generation/outputs/"
+        "release_generation_yearly_global.csv"
+    ),
 }
 
 

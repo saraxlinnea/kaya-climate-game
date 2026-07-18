@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { ScoreRow } from '../types'
 
 const PARTS: { key: keyof ScoreRow; label: string }[] = [
@@ -19,6 +20,11 @@ export function ScorePanel({ score }: Props) {
         <p className="panel-note">
           No score for this country under the default eligibility rules (see SCORING.md).
         </p>
+        <p className="muted">
+          <Link className="country-link" to="/rankings">
+            View leaderboard
+          </Link>
+        </p>
       </section>
     )
   }
@@ -27,7 +33,10 @@ export function ScorePanel({ score }: Props) {
     <section className="panel">
       <h2 className="panel-title">Kaya Score</h2>
       <p className="panel-note">
-        Decoupling score for {score.start_year}–{score.end_year} (not “lowest emissions”).
+        Decoupling score for {score.start_year}–{score.end_year} (not “lowest emissions”).{' '}
+        <Link className="country-link" to="/rankings">
+          Full rankings
+        </Link>
       </p>
       <div className="score-hero">
         <strong>{score.kaya_score.toFixed(0)}</strong>
@@ -40,7 +49,10 @@ export function ScorePanel({ score }: Props) {
             <div className="score-row" key={key}>
               <span>{label}</span>
               <div className="score-track" aria-hidden>
-                <div className="score-fill" style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
+                <div
+                  className="score-fill"
+                  style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+                />
               </div>
               <output>{value.toFixed(0)}</output>
             </div>

@@ -29,6 +29,7 @@ See [DATA_SOURCES.md](DATA_SOURCES.md) for URLs, units, and inclusion rules.
 ```bash
 python src/download_data.py
 python src/clean_data.py
+python src/process_ember.py
 python src/calculate_kaya.py
 python src/validate_kaya.py
 python src/kaya_score.py
@@ -55,7 +56,12 @@ npm run dev
 
 Open the local URL (usually http://localhost:5173). Routes:
 
-- `/` → redirects to `/country/USA`
+- `/` — landing
 - `/country/:iso` — explorer for that ISO3 code
+- `/compare` — side-by-side country trajectories (`?a=USA&b=CHN`)
+- `/map` — world choropleth of Kaya Champion scores (click a country → explorer)
+- `/rankings` — Kaya Champion leaderboard (filter by decoupling, CO₂ cut, prosperity, efficiency, clean energy)
+- `/battle/:iso` — Kaya Combat mini-game (satirical policy levers + tradeoffs)
+- `/methods` — data sources, scoring, limitations
 
-Shows metrics, CO₂ timeline, indexed Kaya factors, auto narrative, and Kaya Score when eligible.
+Explorer shows metrics, CO₂ timeline (territorial / consumption when available), indexed Kaya factors, log decomposition, auto narrative, and Kaya Score when eligible.

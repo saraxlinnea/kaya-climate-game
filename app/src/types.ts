@@ -3,12 +3,16 @@ export type KayaRow = {
   iso_code: string
   year: number
   co2: number
+  /** Consumption-based CO₂ (Mt); may be missing. */
+  consumption_co2?: number | null
   population: number
   gdp: number
   gdp_per_capita: number
   energy_consumption: number
   energy_intensity: number
   carbon_intensity: number
+  /** Ember grid intensity (gCO2e/kWh); may be missing. */
+  electricity_carbon_intensity?: number | null
 }
 
 export type ScoreRow = {

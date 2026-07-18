@@ -23,18 +23,24 @@ async function fetchCsv<T>(url: string, mapRow: (row: Record<string, string>) =>
 }
 
 export async function loadKayaDataset(): Promise<KayaRow[]> {
-  return fetchCsv('/data/kaya_dataset.csv', (row) => ({
-    country: row.country,
-    iso_code: row.iso_code,
-    year: num(row.year),
-    co2: num(row.co2),
-    population: num(row.population),
-    gdp: num(row.gdp),
-    gdp_per_capita: num(row.gdp_per_capita),
-    energy_consumption: num(row.energy_consumption),
-    energy_intensity: num(row.energy_intensity),
-    carbon_intensity: num(row.carbon_intensity),
-  }))
+  return fetchCsv('/data/kaya_dataset.csv', (row) => {
+    const grid = num(row.electricity_carbon_intensity)
+    const cons = num(row.consumption_co2)
+    return {
+      country: row.country,
+      iso_code: row.iso_code,
+      year: num(row.year),
+      co2: num(row.co2),
+      consumption_co2: Number.isFinite(cons) ? cons : null,
+      population: num(row.population),
+      gdp: num(row.gdp),
+      gdp_per_capita: num(row.gdp_per_capita),
+      energy_consumption: num(row.energy_consumption),
+      energy_intensity: num(row.energy_intensity),
+      carbon_intensity: num(row.carbon_intensity),
+      electricity_carbon_intensity: Number.isFinite(grid) ? grid : null,
+    }
+  })
 }
 
 export async function loadKayaScores(): Promise<ScoreRow[]> {
