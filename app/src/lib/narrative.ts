@@ -66,3 +66,70 @@ export function buildNarrative(series: KayaRow[]): Narrative | null {
 
   return { bullets, result }
 }
+
+export type ConsumptionNarrative = {
+  bullets: string[]
+  result: string
+}
+
+/**
+ * Trade-adjusted CO₂ story when consumption_co2 is available.
+ * Does not rewrite the territorial Kaya identity narrative.
+ */
+export function buildConsumptionNarrative(series: KayaRow[]): ConsumptionNarrative | null {
+  const paired = series.filter(
+    (r) =>
+      r.consumption_co2 != null &&
+      Number.isFinite(r.consumption_co2) &&
+      Number.isFinite(r.co2),
+  )
+  if (paired.length < 2) return null
+
+  const start = paired[0]
+  const end = paired[paired.length - 1]
+  const c0 = Number(start.consumption_co2)
+  const c1 = Number(end.consumption_co2)
+  const t0 = start.co2
+  const t1 = end.co2
+  const gapStart = c0 - t0
+  const gapEnd = c1 - t1
+  const consPct = pctChange(c0, c1)
+  const terrPct = pctChange(t0, t1)
+  const gapPctOfTerr = t1 !== 0 ? (gapEnd / t1) * 100 : 0
+
+  const bullets = [
+    `Territorial CO₂ ${formatPct(terrPct)} from ${start.year} → ${end.year}`,
+    `Consumption CO₂ ${formatPct(consPct)} over the same window (trade-adjusted)`,
+  ]
+
+  if (gapEnd > t1 * 0.05) {
+    bullets.push(
+      `Latest gap: consumption is ${formatCompact(gapEnd, 'mt')} higher than territorial (${formatPct(gapPctOfTerr, 0)} of production) — a net importer of embodied emissions`,
+    )
+  } else if (gapEnd < -t1 * 0.05) {
+    bullets.push(
+      `Latest gap: consumption is ${formatCompact(Math.abs(gapEnd), 'mt')} lower than territorial — a net exporter of embodied emissions`,
+    )
+  } else {
+    bullets.push('Latest territorial and consumption totals are close — trade is not the main story here')
+  }
+
+  const gapWidened = Math.abs(gapEnd) > Math.abs(gapStart) * 1.15
+  let result: string
+  if (gapEnd > 0 && terrPct < -2 && consPct > -2) {
+    result =
+      'Production fell faster than the consumption footprint — offshoring can improve the territorial chart without shrinking demand.'
+  } else if (gapEnd < 0 && terrPct > 2) {
+    result =
+      'Territorial emissions rose while consumption stayed lower — export-oriented production can inflate the production ledger.'
+  } else if (gapWidened && Math.abs(gapEnd) > Math.abs(t1) * 0.08) {
+    result =
+      'The territorial–consumption gap widened. Trade composition matters alongside Kaya intensity levers.'
+  } else {
+    result =
+      'Both series move together more than they diverge — still check the gap before treating production as the whole footprint.'
+  }
+
+  return { bullets, result }
+}
+

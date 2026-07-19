@@ -1,5 +1,6 @@
 import Papa from 'papaparse'
 import type { CountryOption, KayaRow, ScoreRow } from '../types'
+import { publicUrl } from './publicUrl'
 
 function num(value: string | undefined): number {
   const n = Number(value)
@@ -23,7 +24,7 @@ async function fetchCsv<T>(url: string, mapRow: (row: Record<string, string>) =>
 }
 
 export async function loadKayaDataset(): Promise<KayaRow[]> {
-  return fetchCsv('/data/kaya_dataset.csv', (row) => {
+  return fetchCsv(publicUrl('data/kaya_dataset.csv'), (row) => {
     const grid = num(row.electricity_carbon_intensity)
     const cons = num(row.consumption_co2)
     return {
@@ -44,7 +45,7 @@ export async function loadKayaDataset(): Promise<KayaRow[]> {
 }
 
 export async function loadKayaScores(): Promise<ScoreRow[]> {
-  return fetchCsv('/data/kaya_scores.csv', (row) => ({
+  return fetchCsv(publicUrl('data/kaya_scores.csv'), (row) => ({
     country: row.country,
     iso_code: row.iso_code,
     start_year: num(row.start_year),

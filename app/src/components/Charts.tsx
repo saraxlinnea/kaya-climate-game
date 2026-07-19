@@ -50,22 +50,23 @@ export function EmissionsChart({
 }: SeriesChartProps & { mode?: 'territorial' | 'consumption' }) {
   const w = 640
   const h = 280
-  const useConsumption = mode === 'consumption'
-  const points = series
-    .map((r) => ({
-      year: r.year,
-      value: useConsumption ? r.consumption_co2 : r.co2,
-    }))
+  const terrPoints = series
+    .map((r) => ({ year: r.year, value: r.co2 }))
+    .filter((p) => Number.isFinite(p.value))
+  const consPoints = series
+    .map((r) => ({ year: r.year, value: r.consumption_co2 }))
     .filter((p) => p.value != null && Number.isFinite(p.value)) as {
     year: number
     value: number
   }[]
+  const primary = mode === 'consumption' ? consPoints : terrPoints
+  const showBoth = terrPoints.length >= 2 && consPoints.length >= 2
 
-  if (points.length < 2) {
+  if (primary.length < 2) {
     return (
       <div className="chart-wrap">
         <p className="muted">
-          {useConsumption
+          {mode === 'consumption'
             ? 'Consumption-based CO₂ not available for enough years in this country.'
             : 'Not enough emissions points to chart.'}
         </p>
@@ -73,14 +74,57 @@ export function EmissionsChart({
     )
   }
 
-  const years = points.map((p) => p.year)
-  const co2 = points.map((p) => p.value)
+  const years = primary.map((p) => p.year)
   const [x0, x1] = [years[0], years[years.length - 1]]
-  const [y0, y1] = extent(co2)
-  const path = buildPath(years, co2, x0, x1, y0, y1, w, h, PAD)
-  const title = useConsumption
-    ? `${country} — consumption CO₂`
-    : `${country} — territorial CO₂`
+  const yVals = showBoth
+    ? [...terrPoints.map((p) => p.value), ...consPoints.map((p) => p.value)]
+    : primary.map((p) => p.value)
+  const [y0, y1] = extent(yVals)
+  const terrPath = showBoth
+    ? buildPath(
+        terrPoints.map((p) => p.year),
+        terrPoints.map((p) => p.value),
+        x0,
+        x1,
+        y0,
+        y1,
+        w,
+        h,
+        PAD,
+      )
+    : null
+  const consPath = showBoth
+    ? buildPath(
+        consPoints.map((p) => p.year),
+        consPoints.map((p) => p.value),
+        x0,
+        x1,
+        y0,
+        y1,
+        w,
+        h,
+        PAD,
+      )
+    : null
+  const singlePath =
+    !showBoth &&
+    buildPath(
+      primary.map((p) => p.year),
+      primary.map((p) => p.value),
+      x0,
+      x1,
+      y0,
+      y1,
+      w,
+      h,
+      PAD,
+    )
+  const title =
+    showBoth
+      ? `${country} — territorial & consumption CO₂`
+      : mode === 'consumption'
+        ? `${country} — consumption CO₂`
+        : `${country} — territorial CO₂`
 
   return (
     <div className="chart-wrap">
@@ -96,10 +140,24 @@ export function EmissionsChart({
           className="chart-axis"
         />
         <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={h - PAD.b} className="chart-axis" />
-        <path
-          d={path}
-          className={`chart-line ${useConsumption ? 'chart-line-cons' : 'chart-line-co2'}`}
-        />
+        {showBoth && terrPath && (
+          <path
+            d={terrPath}
+            className={`chart-line chart-line-co2${mode === 'consumption' ? ' chart-line-dim' : ''}`}
+          />
+        )}
+        {showBoth && consPath && (
+          <path
+            d={consPath}
+            className={`chart-line chart-line-cons${mode === 'territorial' ? ' chart-line-dim' : ''}`}
+          />
+        )}
+        {!showBoth && singlePath && (
+          <path
+            d={singlePath}
+            className={`chart-line ${mode === 'consumption' ? 'chart-line-cons' : 'chart-line-co2'}`}
+          />
+        )}
         <text x={PAD.l} y={h - 10} className="chart-label">
           {x0}
         </text>
@@ -113,6 +171,16 @@ export function EmissionsChart({
           {y0.toFixed(0)}
         </text>
       </svg>
+      {showBoth && (
+        <div className="chart-legend">
+          <span>
+            <i className="swatch chart-line-co2" /> Territorial
+          </span>
+          <span>
+            <i className="swatch chart-line-cons" /> Consumption
+          </span>
+        </div>
+      )}
     </div>
   )
 }

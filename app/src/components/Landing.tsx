@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { COMBAT_SCENARIOS } from '../game/scenarios'
+import { COMPARE_STORIES } from '../lib/compareStories'
 import { usePageTitle } from '../lib/usePageTitle'
 import { SiteNav } from './BrandHeader'
 import { SiteFooter } from './SiteFooter'
@@ -59,6 +60,25 @@ export function Landing() {
           <strong>Methods</strong>
           <span>Data sources, Kaya identity, scoring rules.</span>
         </Link>
+      </section>
+
+      <section className="panel" style={{ marginTop: '1rem' }}>
+        <h2 className="panel-title">Kaya comparisons</h2>
+        <p className="panel-note">
+          Side-by-side stories that teach different systems lessons. Open any pair in Compare.
+        </p>
+        <div className="compare-gallery">
+          {COMPARE_STORIES.map((s) => (
+            <Link
+              key={s.id}
+              className="compare-story"
+              to={`/compare?a=${s.a}&b=${s.b}`}
+            >
+              <strong>{s.label}</strong>
+              <span>{s.lesson}</span>
+            </Link>
+          ))}
+        </div>
       </section>
 
       <section className="panel" style={{ marginTop: '1rem' }}>

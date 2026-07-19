@@ -12,6 +12,12 @@ import type { CountryOption, KayaRow, ScoreRow } from './types'
 
 const DEFAULT_ISO = 'USA'
 
+const routerBasename = (() => {
+  const base = import.meta.env.BASE_URL
+  if (!base || base === '/') return undefined
+  return base.replace(/\/$/, '')
+})()
+
 function useIsoParam(countries: CountryOption[]) {
   const { iso } = useParams()
   const code = (iso ?? DEFAULT_ISO).toUpperCase()
@@ -90,7 +96,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBasename}>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route

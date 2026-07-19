@@ -64,4 +64,16 @@ Open the local URL (usually http://localhost:5173). Routes:
 - `/battle/:iso` — Kaya Combat mini-game (satirical policy levers + tradeoffs)
 - `/methods` — data sources, scoring, limitations
 
-Explorer shows metrics, CO₂ timeline (territorial / consumption when available), indexed Kaya factors, log decomposition, auto narrative, and Kaya Score when eligible.
+Explorer shows metrics, CO₂ timeline (territorial / consumption when available), indexed Kaya factors, log decomposition, auto narrative, territorial-vs-consumption story when data exist, and Kaya Score when eligible.
+
+## Deploy (GitHub Pages)
+
+Workflows:
+
+- `.github/workflows/ci.yml` — `npm run build` on push/PR
+- `.github/workflows/deploy-pages.yml` — build with `VITE_BASE=/kaya-climate-game/` and publish
+
+One-time repo setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
+Live URL (after first successful deploy): `https://saraxlinnea.github.io/kaya-climate-game/`
+

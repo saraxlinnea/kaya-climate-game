@@ -238,12 +238,15 @@ Build in this order. Do **not** build animations before the data is validated.
 - Explorer log-decomposition chart; leaderboard “why this rank?”
 - Ember grid intensity + EV payoff
 - Country compare (`/compare`); consumption CO₂ toggle; world map (`/map`)
+- Landing compare gallery + expanded combat scenarios
+- Consumption narrative panel + Methods section; HKG/SGP map markers
+- GitHub Actions CI + Pages deploy workflow
 
 ### Future / out of scope (ask before starting)
 
-- Deploy target (GitHub Pages / static host) and CI
-- Tiny jurisdictions missing from 110m map outlines (e.g. HKG, SGP)
-- Deeper consumption-vs-territorial narrative beyond the explorer toggle
+- ~~Deploy target (GitHub Pages / static host) and CI~~ — workflows in `.github/workflows/` (enable Pages in repo settings)
+- Other microstates still missing from 110m polygons (beyond HKG/SGP markers)
+- Rescoring on consumption CO₂ (explicitly not done; territorial scores stay canonical)
 
 ## Agent Working Rules
 

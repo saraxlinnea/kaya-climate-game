@@ -26,8 +26,23 @@ export function Methodology() {
         <h2>Data</h2>
         <p>
           Primary source: <strong>Our World in Data</strong> CO₂ bulk extract (Global Carbon Project,
-          Energy Institute, World Bank, UN population inputs). Territorial (production-based) CO₂.
-          Country rows use ISO3 codes; aggregates are dropped. Missing years are not interpolated.
+          Energy Institute, World Bank, UN population inputs). Country rows use ISO3 codes; aggregates
+          are dropped. Missing years are not interpolated.
+        </p>
+
+        <h2>Territorial vs consumption CO₂</h2>
+        <p>
+          Default charts and the Kaya identity use <strong>territorial</strong> (production-based)
+          CO₂ — emissions from fuels burned and processes inside borders. OWID also publishes{' '}
+          <strong>consumption-based</strong> CO₂, which reallocates emissions embodied in traded
+          goods. When that series exists, the explorer overlays both lines and adds a short
+          territorial-vs-consumption narrative.
+        </p>
+        <p>
+          A falling territorial series can reflect cleaner energy <em>or</em> offshoring of industry.
+          Consumption CO₂ is a footprint check for that question. It does <strong>not</strong>{' '}
+          rewrite Kaya Champion scores (still territorial) and is not a full multi-regional input–output
+          model.
         </p>
 
         <h2>Kaya Champion score</h2>
@@ -49,13 +64,20 @@ export function Methodology() {
 
         <h2>Limitations</h2>
         <ul>
-          <li>Production-based CO₂ by default; consumption-based series available in the explorer when OWID provides it.</li>
+          <li>
+            Production-based CO₂ drives scores and the main “emissions changed because…” narrative;
+            consumption overlay is available when OWID provides it.
+          </li>
           <li>
             Primary-energy carbon intensity plus optional Ember <em>electricity</em> intensity
             (gCO₂e/kWh) for grid-aware EV combat.
           </li>
           <li>Score clip bounds are product choices for v1, not physical constants.</li>
           <li>GDP series often lags energy/CO₂ — latest complete Kaya years may trail the calendar.</li>
+          <li>
+            Coarse world map outlines omit some tiny jurisdictions; Hong Kong and Singapore appear as
+            markers when scored.
+          </li>
         </ul>
 
         <p className="methods-links">

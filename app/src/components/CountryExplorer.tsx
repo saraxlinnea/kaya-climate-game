@@ -6,7 +6,7 @@ import { usePageTitle } from '../lib/usePageTitle'
 import { BrandHeader } from './BrandHeader'
 import { EmissionsChart, FactorsChart } from './Charts'
 import { DecompositionChart } from './DecompositionChart'
-import { MetricCards, NarrativePanel } from './MetricCards'
+import { MetricCards, NarrativePanel, ConsumptionNarrativePanel } from './MetricCards'
 import { ScorePanel } from './ScorePanel'
 import { SiteFooter } from './SiteFooter'
 
@@ -97,8 +97,8 @@ export function CountryExplorer({ countries, rows, scores, iso }: Props) {
               <EmissionsChart series={series} country={countryName} mode={co2Mode} />
               {hasConsumption && (
                 <p className="muted" style={{ marginTop: '0.5rem' }}>
-                  Territorial = produced inside borders. Consumption adjusts for trade — useful when
-                  industry moved offshore.
+                  Territorial = produced inside borders. Consumption adjusts for trade. Toggle
+                  highlights one series; both are drawn when data exist. Scores stay territorial.
                 </p>
               )}
             </section>
@@ -126,6 +126,12 @@ export function CountryExplorer({ countries, rows, scores, iso }: Props) {
           <div style={{ marginTop: '1rem' }}>
             <NarrativePanel series={series} />
           </div>
+
+          {hasConsumption && (
+            <div style={{ marginTop: '1rem' }}>
+              <ConsumptionNarrativePanel series={series} />
+            </div>
+          )}
         </>
       )}
 

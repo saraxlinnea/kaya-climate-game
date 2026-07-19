@@ -1,5 +1,11 @@
 import type { KayaRow } from '../types'
-import { buildNarrative, formatCompact, formatPct, pctChange } from '../lib/narrative'
+import {
+  buildConsumptionNarrative,
+  buildNarrative,
+  formatCompact,
+  formatPct,
+  pctChange,
+} from '../lib/narrative'
 
 type Props = {
   series: KayaRow[]
@@ -101,6 +107,30 @@ export function NarrativePanel({ series }: Props) {
       <h2 className="panel-title">Emissions changed because…</h2>
       <p className="panel-note">
         {start.year} → {end.year}. Factors interact; no single driver “causes” the outcome alone.
+        Uses territorial CO₂ (the Kaya identity framing).
+      </p>
+      <ul className="narrative-list">
+        {narrative.bullets.map((b) => (
+          <li key={b}>{b}</li>
+        ))}
+      </ul>
+      <p className="narrative-result">{narrative.result}</p>
+    </section>
+  )
+}
+
+export function ConsumptionNarrativePanel({ series }: Props) {
+  const narrative = buildConsumptionNarrative(series)
+  if (!narrative) return null
+  const start = series[0]
+  const end = series[series.length - 1]
+
+  return (
+    <section className="panel">
+      <h2 className="panel-title">Territorial vs consumption</h2>
+      <p className="panel-note">
+        {start.year} → {end.year}. Consumption-based CO₂ adjusts for trade. Kaya Champion scores still
+        use territorial CO₂ — this panel is a footprint check, not a rescoring.
       </p>
       <ul className="narrative-list">
         {narrative.bullets.map((b) => (

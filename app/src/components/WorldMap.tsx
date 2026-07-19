@@ -4,9 +4,12 @@ import type { ScoreRow } from '../types'
 import {
   geometryToPath,
   MAP_VIEWBOX,
+  project,
   type GeoCollection,
   type GeoFeature,
 } from '../lib/geoPath'
+import { MAP_POINT_MARKERS } from '../lib/mapMarkers'
+import { publicUrl } from '../lib/publicUrl'
 import { usePageTitle } from '../lib/usePageTitle'
 import { BrandHeader } from './BrandHeader'
 import { SiteFooter } from './SiteFooter'
@@ -72,7 +75,7 @@ export function WorldMap({ scores }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/data/world.geojson')
+    fetch(publicUrl('data/world.geojson'))
       .then((r) => {
         if (!r.ok) throw new Error(`Map data HTTP ${r.status}`)
         return r.json() as Promise<GeoCollection>
@@ -128,8 +131,8 @@ export function WorldMap({ scores }: Props) {
         <h1 className="panel-title">Decoupling around the world</h1>
         <p className="panel-note">
           Window {windowLabel}. Color shows relative {active.label.toLowerCase()} among scored
-          countries (not absolute emissions). Tiny jurisdictions like Singapore may be missing from
-          this coarse outline.
+          Coarse Natural Earth 110m outlines omit some tiny jurisdictions (Hong Kong and Singapore
+          show as markers when they have a score).
         </p>
 
         <div className="filter-row" style={{ marginBottom: '0.85rem' }}>
@@ -209,6 +212,55 @@ export function WorldMap({ scores }: Props) {
                       }
                     }}
                   />
+                )
+              })}
+              {MAP_POINT_MARKERS.map((m) => {
+                const score = byIso.get(m.iso)
+                if (!score) return null
+                const [x, y] = project([m.lon, m.lat])
+                const t = (Number(score[metric]) - min) / (max - min)
+                const fill = scoreColor(t)
+                return (
+                  <g key={`marker-${m.iso}`}>
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r={5.5}
+                      fill={fill}
+                      className="world-map-marker scored"
+                      tabIndex={0}
+                      role="link"
+                      aria-label={`${m.name}, score ${Number(score[metric]).toFixed(0)}`}
+                      onMouseEnter={(e) => {
+                        const rect = (e.target as SVGCircleElement).ownerSVGElement?.getBoundingClientRect()
+                        if (!rect) return
+                        setHover({
+                          iso: m.iso,
+                          name: m.name,
+                          x: e.clientX - rect.left,
+                          y: e.clientY - rect.top,
+                        })
+                      }}
+                      onMouseMove={(e) => {
+                        const rect = (e.target as SVGCircleElement).ownerSVGElement?.getBoundingClientRect()
+                        if (!rect) return
+                        setHover({
+                          iso: m.iso,
+                          name: m.name,
+                          x: e.clientX - rect.left,
+                          y: e.clientY - rect.top,
+                        })
+                      }}
+                      onMouseLeave={() => setHover(null)}
+                      onClick={() => navigate(`/country/${m.iso}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          navigate(`/country/${m.iso}`)
+                        }
+                      }}
+                    />
+                  </g>
                 )
               })}
             </svg>
