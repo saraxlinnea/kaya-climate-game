@@ -50,7 +50,7 @@ export function Leaderboard({ scores }: Props) {
   const [query, setQuery] = useState('')
   const [openIso, setOpenIso] = useState<string | null>(null)
   const active = FILTERS.find((f) => f.key === sortKey) ?? FILTERS[0]
-  usePageTitle('Leaderboard — Kaya Climate')
+  usePageTitle('Leaderboard: Kaya Climate')
 
   const ranked = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -72,13 +72,14 @@ export function Leaderboard({ scores }: Props) {
 
   return (
     <div className="app-shell page-enter">
-      <BrandHeader subtitle="Leaderboard: countries ranked on decoupling — not lowest absolute emissions." />
+      <BrandHeader subtitle="Countries ranked on cutting emissions while raising living standards, not on lowest absolute emissions." />
 
       <section className="panel">
         <h1 className="panel-title">Kaya Champion rankings</h1>
         <p className="panel-note">
-          Window {windowLabel}. Click a row for “why this rank?” Transition economies often place
-          high after 2000 — real efficiency + growth, not a bug.
+          Window {windowLabel}. Click a row for a short explanation of the rank. Transition economies
+          often place high after 2000 because efficiency and growth both improved. That is a feature
+          of the method, not an error.
         </p>
 
         <div className="filter-row" role="tablist" aria-label="Ranking mode">

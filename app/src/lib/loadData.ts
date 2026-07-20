@@ -3,6 +3,8 @@ import type { CountryOption, KayaRow, ScoreRow } from '../types'
 import { publicUrl } from './publicUrl'
 
 function num(value: string | undefined): number {
+  // Empty CSV cells must not become 0 — Number('') === 0 and caused Infinity% deltas.
+  if (value == null || String(value).trim() === '') return NaN
   const n = Number(value)
   return Number.isFinite(n) ? n : NaN
 }

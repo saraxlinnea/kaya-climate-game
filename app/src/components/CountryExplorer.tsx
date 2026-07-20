@@ -6,7 +6,13 @@ import { usePageTitle } from '../lib/usePageTitle'
 import { BrandHeader } from './BrandHeader'
 import { EmissionsChart, FactorsChart } from './Charts'
 import { DecompositionChart } from './DecompositionChart'
-import { MetricCards, NarrativePanel, ConsumptionNarrativePanel } from './MetricCards'
+import {
+  MetricCards,
+  NarrativePanel,
+  ConsumptionNarrativePanel,
+  KayaMathPanel,
+  ExternalContextPanel,
+} from './MetricCards'
 import { ScorePanel } from './ScorePanel'
 import { SiteFooter } from './SiteFooter'
 
@@ -30,11 +36,11 @@ export function CountryExplorer({ countries, rows, scores, iso }: Props) {
     (r) => r.consumption_co2 != null && Number.isFinite(r.consumption_co2),
   )
 
-  usePageTitle(`${countryName} — Kaya Climate`)
+  usePageTitle(`${countryName}: Kaya Climate`)
 
   return (
     <div className="app-shell page-enter">
-      <BrandHeader subtitle="Country explorer: see how population, prosperity, energy intensity, and carbon intensity reshape CO₂ over time." />
+      <BrandHeader subtitle="Follow one country through four parts of emissions: people, income, energy use, and how dirty the energy is." />
 
       <section className="panel">
         <div className="controls">
@@ -53,15 +59,15 @@ export function CountryExplorer({ countries, rows, scores, iso }: Props) {
             </select>
           </div>
           <div className="field">
-            <label>Window</label>
+            <label>Years shown</label>
             <div className="muted" style={{ padding: '0.65rem 0' }}>
-              {startYear && endYear ? `${startYear} → ${endYear} (latest available)` : '—'}
+              {startYear && endYear ? `${startYear} to ${endYear} (latest complete year)` : '—'}
             </div>
           </div>
         </div>
 
         {series.length < 2 ? (
-          <p className="error">Not enough years of complete Kaya data for this country.</p>
+          <p className="error">Not enough years of complete data for this country.</p>
         ) : (
           <>
             <h1 className="panel-title" style={{ marginTop: '1.25rem' }}>
@@ -95,29 +101,41 @@ export function CountryExplorer({ countries, rows, scores, iso }: Props) {
                 </div>
               )}
               <EmissionsChart series={series} country={countryName} mode={co2Mode} />
-              {hasConsumption && (
-                <p className="muted" style={{ marginTop: '0.5rem' }}>
-                  Territorial = produced inside borders. Consumption adjusts for trade. Toggle
-                  highlights one series; both are drawn when data exist. Scores stay territorial.
-                </p>
-              )}
             </section>
             <ScorePanel score={score} />
           </div>
 
-          <p className="muted" style={{ marginTop: '0.85rem' }}>
-            <Link className="country-link" to={`/battle/${iso}`}>
-              Fight as {countryName}
-            </Link>
-            {' — country-seeded combat · '}
-            <Link className="country-link" to={`/compare?a=${iso}&b=CHN`}>
-              Compare
-            </Link>
-          </p>
+          <section className="panel" style={{ marginTop: '1rem' }}>
+            <h2 className="panel-title">How this relates to the Champion score</h2>
+            <p className="panel-note">
+              The charts on this page show what happened to population, income, energy intensity,
+              carbon intensity, and total CO₂ over the years available for {countryName}. The Kaya
+              Champion score answers a narrower question: from 2000 to the latest year, did the
+              country cut total emissions, raise income per person, and improve those intensities?
+              A country can look cleaner on parts of this page and still score poorly if total CO₂
+              kept rising after 2000. The score is our own ranking for this site. It is not an
+              official IPCC measure.{' '}
+              <Link className="country-link" to="/methods">
+                Methods
+              </Link>
+              {' · '}
+              <Link className="country-link" to={`/battle/${iso}`}>
+                Combat as {countryName}
+              </Link>
+              {' · '}
+              <Link className="country-link" to={`/compare?a=${iso}&b=CAN`}>
+                Compare
+              </Link>
+            </p>
+          </section>
 
           <section className="panel" style={{ marginTop: '1rem' }}>
             <FactorsChart series={series} country={countryName} />
           </section>
+
+          <div style={{ marginTop: '1rem' }}>
+            <KayaMathPanel series={series} />
+          </div>
 
           <div style={{ marginTop: '1rem' }}>
             <DecompositionChart series={series} country={countryName} />
@@ -132,6 +150,10 @@ export function CountryExplorer({ countries, rows, scores, iso }: Props) {
               <ConsumptionNarrativePanel series={series} />
             </div>
           )}
+
+          <div style={{ marginTop: '1rem' }}>
+            <ExternalContextPanel iso={iso} countryName={countryName} />
+          </div>
         </>
       )}
 

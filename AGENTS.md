@@ -241,12 +241,16 @@ Build in this order. Do **not** build animations before the data is validated.
 - Landing compare gallery + expanded combat scenarios
 - Consumption narrative panel + Methods section; HKG/SGP map markers
 - GitHub Actions CI + Pages deploy workflow
+- Infinity% guard (empty CSV → NaN; pctChange returns null); identity equation on landing; per-country math panel
+- Cited external context links; trajectory vs levels (CO₂/capita, CO₂/GDP) on explorer + Compare
 
 ### Future / out of scope (ask before starting)
 
 - ~~Deploy target (GitHub Pages / static host) and CI~~ — workflows in `.github/workflows/` (enable Pages in repo settings)
 - Other microstates still missing from 110m polygons (beyond HKG/SGP markers)
 - Rescoring on consumption CO₂ (explicitly not done; territorial scores stay canonical)
+- Replacing Champion trajectory score with level/per-capita ranking (show as secondary lenses only unless version-bumped in SCORING.md)
+- EPI / Climate Action Tracker / UNEP gap datasets
 
 ## Agent Working Rules
 

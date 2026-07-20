@@ -32,11 +32,11 @@ export function buildRunReport(state: GameState): RunReport {
 
   const outcome =
     state.status === 'won'
-      ? 'Victory — decoupling under a turn limit'
+      ? 'Victory: you cut emissions pressure while holding prosperity'
       : state.status === 'lost_economy'
-        ? 'Defeat — prosperity collapsed'
+        ? 'Defeat: prosperity fell too far'
         : state.status === 'lost_turns'
-          ? 'Defeat — out of turns'
+          ? 'Defeat: out of turns'
           : 'In progress'
 
   const strategyLine =
@@ -54,34 +54,39 @@ export function buildRunReport(state: GameState): RunReport {
     badges.push({
       id: 'austerity',
       label: 'Austerity trap',
-      detail: 'You smashed the meter by making people poorer. Not the win condition.',
+      detail: 'You lowered the meter by making people poorer. That is not the win condition.',
     })
   }
   const intensityUses =
     (state.actionUses.solar ?? 0) +
     (state.actionUses.nuclear ?? 0) +
     (state.actionUses.buildings ?? 0) +
-    (state.actionUses.efficiency_industry ?? 0)
+    (state.actionUses.efficiency_industry ?? 0) +
+    (state.actionUses.coal_retire ?? 0) +
+    (state.actionUses.heat_pumps ?? 0) +
+    (state.actionUses.carbon_price ?? 0) +
+    (state.actionUses.fusion ?? 0) +
+    (state.actionUses.dac ?? 0)
   const popUses = state.actionUses.one_child ?? 0
   if (intensityUses >= 3 && popUses === 0) {
     badges.push({
       id: 'intensity',
       label: 'Intensity specialist',
-      detail: 'Leaned on energy/carbon intensity — not population policy.',
+      detail: 'You focused on energy and carbon intensity, not population policy.',
     })
   }
   if (popUses >= 2) {
     badges.push({
-      id: 'pop_fetish',
-      label: 'Population fetish',
-      detail: 'Leaned hard on fertility policy. Satire with sharp tradeoffs — not a silver bullet.',
+      id: 'pop_focus',
+      label: 'Population focus',
+      detail: 'You leaned hard on fertility policy. It has sharp tradeoffs and is not a silver bullet.',
     })
   }
   if ((state.actionUses.grow ?? 0) >= 2) {
     badges.push({
       id: 'growth',
-      label: 'Growth junkie',
-      detail: 'Kept stoking affluence. Decoupling only works if intensity outruns scale.',
+      label: 'Growth focus',
+      detail: 'You kept raising income. Cleaner growth only works if intensity falls faster than scale rises.',
     })
   }
   if ((state.actionUses.evs ?? 0) >= 1 && state.gridIntensity != null) {
@@ -92,20 +97,20 @@ export function buildRunReport(state: GameState): RunReport {
       id: clean ? 'grid_ally' : 'grid_realist',
       label: clean ? 'Clean-grid ally' : 'Grid realist',
       detail: clean
-        ? 'Electrified on a relatively clean grid — where EVs actually help.'
-        : 'Tried EVs; dirty grids move smog upstream. Ember intensity mattered.',
+        ? 'You electrified on a relatively clean grid, where electric vehicles help more.'
+        : 'You tried electric vehicles on a dirtier grid, which mostly moves pollution to the power plant.',
     })
   }
   if (state.status === 'lost_turns' && pressure > 85) {
     badges.push({
       id: 'bau',
-      label: 'BAU got you',
-      detail: 'Historical population/prosperity drift ate your gains.',
+      label: 'Usual growth won',
+      detail: 'Historical population and prosperity growth ate your gains.',
     })
   }
 
   const shareText = [
-    `Kaya Combat — ${state.country}`,
+    `Kaya Combat: ${state.country}`,
     outcome,
     `Pressure ${pressure.toFixed(0)} · Prosperity ${prosperity.toFixed(0)} · ${state.turn} turns`,
     strategyLine,

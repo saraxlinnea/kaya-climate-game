@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react'
 import type { KayaRow } from '../types'
+import { formatPct, pctChange } from '../lib/narrative'
 
 type SeriesChartProps = {
   series: KayaRow[]
@@ -43,6 +45,10 @@ function buildPath(
 
 const PAD = { l: 44, r: 12, t: 28, b: 36 }
 
+function ChartCaption({ children }: { children: ReactNode }) {
+  return <figcaption className="chart-caption">{children}</figcaption>
+}
+
 export function EmissionsChart({
   series,
   country,
@@ -67,7 +73,7 @@ export function EmissionsChart({
       <div className="chart-wrap">
         <p className="muted">
           {mode === 'consumption'
-            ? 'Consumption-based CO₂ not available for enough years in this country.'
+            ? 'Consumption-based CO₂ is not available for enough years in this country.'
             : 'Not enough emissions points to chart.'}
         </p>
       </div>
@@ -119,15 +125,14 @@ export function EmissionsChart({
       h,
       PAD,
     )
-  const title =
-    showBoth
-      ? `${country} — territorial & consumption CO₂`
-      : mode === 'consumption'
-        ? `${country} — consumption CO₂`
-        : `${country} — territorial CO₂`
+  const title = showBoth
+    ? `${country}: territorial and consumption CO₂`
+    : mode === 'consumption'
+      ? `${country}: consumption CO₂`
+      : `${country}: territorial CO₂`
 
   return (
-    <div className="chart-wrap">
+    <figure className="chart-wrap">
       <svg viewBox={`0 0 ${w} ${h}`} className="svg-chart" role="img" aria-label={title}>
         <text x={PAD.l} y={18} className="chart-title">
           {title}
@@ -181,7 +186,12 @@ export function EmissionsChart({
           </span>
         </div>
       )}
-    </div>
+      <ChartCaption>
+        Million tonnes of CO₂ from {x0} to {x1}. Territorial emissions are produced inside the
+        country’s borders. Consumption emissions adjust for trade in goods. The Kaya Champion score
+        uses territorial totals only. The toggle above highlights one series when both are drawn.
+      </ChartCaption>
+    </figure>
   )
 }
 
@@ -191,10 +201,28 @@ const FACTOR_SERIES: {
   className: string
 }[] = [
   { key: 'population', label: 'Population', className: 'chart-line-pop' },
-  { key: 'gdp_per_capita', label: 'GDP/capita', className: 'chart-line-gdp' },
+  { key: 'gdp_per_capita', label: 'Income per person', className: 'chart-line-gdp' },
   { key: 'energy_intensity', label: 'Energy intensity', className: 'chart-line-ei' },
   { key: 'carbon_intensity', label: 'Carbon intensity', className: 'chart-line-ci' },
 ]
+
+function factorsReadingLine(series: KayaRow[]): string | null {
+  if (series.length < 2) return null
+  const start = series[0]
+  const end = series[series.length - 1]
+  const bits: string[] = []
+  const gdp = pctChange(start.gdp_per_capita, end.gdp_per_capita)
+  const ei = pctChange(start.energy_intensity, end.energy_intensity)
+  const ci = pctChange(start.carbon_intensity, end.carbon_intensity)
+  const co2 = pctChange(start.co2, end.co2)
+  if (gdp != null && gdp > 2) bits.push(`income per person rose ${formatPct(gdp, 0)}`)
+  else if (gdp != null && gdp < -2) bits.push(`income per person fell ${formatPct(gdp, 0)}`)
+  if (ei != null && ei < -2) bits.push(`energy intensity fell ${formatPct(ei, 0)}`)
+  if (ci != null && ci < -2) bits.push(`carbon intensity fell ${formatPct(ci, 0)}`)
+  if (co2 != null) bits.push(`total CO₂ changed ${formatPct(co2, 0)}`)
+  if (bits.length === 0) return null
+  return `Over this window, ${bits.join('; ')}.`
+}
 
 export function FactorsChart({ series, country }: SeriesChartProps) {
   const w = 640
@@ -207,17 +235,19 @@ export function FactorsChart({ series, country }: SeriesChartProps) {
   })
   const all = indexed.flat()
   const [y0, y1] = extent(all)
+  const reading = factorsReadingLine(series)
+  const title = `How four parts of the Kaya identity changed in ${country}`
 
   return (
-    <div className="chart-wrap">
+    <figure className="chart-wrap">
       <svg
         viewBox={`0 0 ${w} ${h}`}
         className="svg-chart"
         role="img"
-        aria-label={`${country} Kaya factors indexed`}
+        aria-label={title}
       >
         <text x={PAD.l} y={18} className="chart-title">
-          {country} — Kaya factors (start = 100)
+          {title}
         </text>
         <line
           x1={PAD.l}
@@ -249,6 +279,16 @@ export function FactorsChart({ series, country }: SeriesChartProps) {
           </li>
         ))}
       </ul>
-    </div>
+      <ChartCaption>
+        Each line starts at 100 in {x0}, then tracks relative change through {x1}. A line above 100
+        means that part of the identity is larger than at the start; below 100 means it is smaller.
+        Rising population and income tend to push emissions up. Falling energy intensity (less energy
+        per dollar of GDP) and falling carbon intensity (less CO₂ per unit of energy) tend to pull
+        emissions down. Total CO₂ is the product of these four terms in the Kaya identity; other
+        forces (for example land use) are outside this frame, so the lines need not move together.
+        {reading ? ` ${reading}` : ''} This chart explains the accounting story. It is not the Kaya
+        Champion score, which uses rates of change from 2000 to the latest year under fixed weights.
+      </ChartCaption>
+    </figure>
   )
 }

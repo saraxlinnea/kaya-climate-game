@@ -54,59 +54,64 @@ export function DecompositionChart({ series, country }: DecompositionProps) {
 
   return (
     <section className="panel">
-      <h2 className="panel-title">What drove the change?</h2>
+      <h2 className="panel-title">What pushed emissions up or down?</h2>
       <p className="panel-note">
-        Log decomposition for {country} ({parts.startYear}–{parts.endYear}): contributions to Δln
-        CO₂. Bars sum (within rounding) to total CO₂ change.
+        For {country} from {parts.startYear} to {parts.endYear}, each bar is that factor’s
+        contribution to the change in emissions (on a log scale), within the Kaya identity. The bars
+        add up, within rounding, to the total change in CO₂.
       </p>
-      <div className="decomp-chart" role="img" aria-label="Kaya log decomposition">
-        {DECOMP_ROWS.map((row, i) => {
-          const v = values[i]
-          const pct = (Math.abs(v) / maxAbs) * 50
-          return (
-            <div className="decomp-row" key={row.key}>
-              <span className="decomp-label">{row.label}</span>
-              <div className="decomp-track">
-                <div className="decomp-zero" />
-                <div
-                  className={`decomp-bar ${row.className} ${v >= 0 ? 'pos' : 'neg'}`}
-                  style={
-                    v >= 0
-                      ? { left: '50%', width: `${pct}%` }
-                      : { right: '50%', width: `${pct}%` }
-                  }
-                />
+      <figure>
+        <div className="decomp-chart" role="img" aria-label="Contribution of each driver to the change in emissions">
+          {DECOMP_ROWS.map((row, i) => {
+            const v = values[i]
+            const pct = (Math.abs(v) / maxAbs) * 50
+            return (
+              <div className="decomp-row" key={row.key}>
+                <span className="decomp-label">{row.label}</span>
+                <div className="decomp-track">
+                  <div className="decomp-zero" />
+                  <div
+                    className={`decomp-bar ${row.className} ${v >= 0 ? 'pos' : 'neg'}`}
+                    style={
+                      v >= 0
+                        ? { left: '50%', width: `${pct}%` }
+                        : { right: '50%', width: `${pct}%` }
+                    }
+                  />
+                </div>
+                <output className={v >= 0 ? 'delta-pos' : 'delta-neg'}>
+                  {v >= 0 ? '+' : ''}
+                  {v.toFixed(2)}
+                </output>
               </div>
-              <output className={v >= 0 ? 'delta-pos' : 'delta-neg'}>
-                {v >= 0 ? '+' : ''}
-                {v.toFixed(2)}
-              </output>
+            )
+          })}
+          <div className="decomp-row decomp-total">
+            <span className="decomp-label">Total CO₂ change</span>
+            <div className="decomp-track">
+              <div className="decomp-zero" />
+              <div
+                className={`decomp-bar decomp-co2 ${parts.dlnCo2 >= 0 ? 'pos' : 'neg'}`}
+                style={
+                  parts.dlnCo2 >= 0
+                    ? { left: '50%', width: `${(Math.abs(parts.dlnCo2) / maxAbs) * 50}%` }
+                    : { right: '50%', width: `${(Math.abs(parts.dlnCo2) / maxAbs) * 50}%` }
+                }
+              />
             </div>
-          )
-        })}
-        <div className="decomp-row decomp-total">
-          <span className="decomp-label">Δ ln CO₂</span>
-          <div className="decomp-track">
-            <div className="decomp-zero" />
-            <div
-              className={`decomp-bar decomp-co2 ${parts.dlnCo2 >= 0 ? 'pos' : 'neg'}`}
-              style={
-                parts.dlnCo2 >= 0
-                  ? { left: '50%', width: `${(Math.abs(parts.dlnCo2) / maxAbs) * 50}%` }
-                  : { right: '50%', width: `${(Math.abs(parts.dlnCo2) / maxAbs) * 50}%` }
-              }
-            />
+            <output className={parts.dlnCo2 >= 0 ? 'delta-pos' : 'delta-neg'}>
+              {parts.dlnCo2 >= 0 ? '+' : ''}
+              {parts.dlnCo2.toFixed(2)}
+            </output>
           </div>
-          <output className={parts.dlnCo2 >= 0 ? 'delta-pos' : 'delta-neg'}>
-            {parts.dlnCo2 >= 0 ? '+' : ''}
-            {parts.dlnCo2.toFixed(2)}
-          </output>
         </div>
-      </div>
-      <p className="muted" style={{ marginTop: '0.75rem' }}>
-        Positive → pushed emissions up; negative → pulled them down. Factors interact — no single
-        bar is the whole story.
-      </p>
+        <figcaption className="chart-caption">
+          Bars that extend to the right raised emissions. Bars that extend to the left lowered them.
+          Population and income often push right. Falling energy or carbon intensity push left. This
+          is only the Kaya identity breakdown; other forces can matter too. No single bar is the
+          whole story, and this chart is not the Champion score.
+        </figcaption>
+      </figure>
     </section>
   )
 }

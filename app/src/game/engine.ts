@@ -153,15 +153,16 @@ export function seedFromContext(ctx: SeedContext): GameState {
         ? 'Carbon intensity starts relatively clean vs peers.'
         : 'Carbon intensity near peer median.'
 
-  let gridNote = 'No Ember grid-intensity row for this year — EV payoff uses primary-energy carbon intensity.'
+  let gridNote =
+    'No electricity carbon number for this year. Electric-vehicle payoff uses primary-energy carbon intensity instead.'
   if (grid != null && medianGrid != null && medianGrid > 0) {
     const ratio = grid / medianGrid
     if (ratio <= 0.7) {
-      gridNote = `Grid is clean (~${grid.toFixed(0)} gCO₂e/kWh vs peer median ${medianGrid.toFixed(0)}) — electrify vehicles hits harder.`
+      gridNote = `The power grid is clean (about ${grid.toFixed(0)} gCO₂e/kWh vs peer median ${medianGrid.toFixed(0)}). Electrifying vehicles helps more.`
     } else if (ratio >= 1.3) {
-      gridNote = `Grid is dirty (~${grid.toFixed(0)} gCO₂e/kWh vs peer median ${medianGrid.toFixed(0)}) — EVs mostly move smog to the power plant.`
+      gridNote = `The power grid is dirty (about ${grid.toFixed(0)} gCO₂e/kWh vs peer median ${medianGrid.toFixed(0)}). Electric vehicles mostly move pollution to the power plant.`
     } else {
-      gridNote = `Grid intensity ~${grid.toFixed(0)} gCO₂e/kWh (peer median ${medianGrid.toFixed(0)}).`
+      gridNote = `Grid intensity about ${grid.toFixed(0)} gCO₂e/kWh (peer median ${medianGrid.toFixed(0)}).`
     }
   }
 
@@ -180,7 +181,7 @@ export function seedFromContext(ctx: SeedContext): GameState {
     log: [
       `The CO₂ Monster awakens in ${ctx.row.country} (${ctx.row.year}). ${eiNote} ${ciNote}`,
       gridNote,
-      `BAU drift each turn: population ×${bau.population.toFixed(3)}, prosperity ×${bau.affluence.toFixed(3)} (from this country’s history). Cut emissions pressure to ≤${WIN_CO2} without dropping prosperity below ${MIN_AFFLUENCE}.`,
+      `Each turn adds usual growth from this country’s history: population ×${bau.population.toFixed(3)}, prosperity ×${bau.affluence.toFixed(3)}. Cut emissions pressure to ${WIN_CO2} or less without dropping prosperity below ${MIN_AFFLUENCE}.`,
     ],
     status: 'playing',
   }
@@ -231,7 +232,7 @@ export function previewEffects(
     effects[key] = diminishMultiplier(base, used)
   }
 
-  if (actionId === 'evs') {
+  if (actionId === 'evs' || actionId === 'heat_pumps') {
     // Prefer Ember electricity carbon intensity when available.
     if (
       state.gridIntensity != null &&
@@ -239,16 +240,16 @@ export function previewEffects(
       state.medianGridIntensity > 0
     ) {
       const ratio = state.gridIntensity / state.medianGridIntensity
-      let base = 0.93
-      if (ratio <= 0.7) base = 0.88
-      else if (ratio <= 0.9) base = 0.9
-      else if (ratio >= 1.5) base = 0.985
-      else if (ratio >= 1.3) base = 0.97
+      let base = actionId === 'heat_pumps' ? 0.91 : 0.93
+      if (ratio <= 0.7) base = actionId === 'heat_pumps' ? 0.86 : 0.88
+      else if (ratio <= 0.9) base = actionId === 'heat_pumps' ? 0.88 : 0.9
+      else if (ratio >= 1.5) base = actionId === 'heat_pumps' ? 0.98 : 0.985
+      else if (ratio >= 1.3) base = actionId === 'heat_pumps' ? 0.96 : 0.97
       effects = {
         ...effects,
         carbonIntensity: diminishMultiplier(base, used),
       }
-    } else {
+    } else if (actionId === 'evs') {
       const ciRatio = state.factors.carbonIntensity / state.startFactors.carbonIntensity
       if (ciRatio > 1.05 || state.factors.carbonIntensity > 110) {
         effects = {
@@ -313,6 +314,9 @@ export function applyAction(state: GameState, actionId: string): GameState {
   const effects = previewEffects(state, actionId)
   if (!effects) return state
 
+  const pressureBefore = emissionsPressure(state)
+  const prosperityBefore = prosperityIndex(state)
+
   let factors = applyEffects(state.factors, effects)
   factors = applyBau(factors, state.bau)
 
@@ -330,28 +334,50 @@ export function applyAction(state: GameState, actionId: string): GameState {
   const pressure = emissionsPressure(nextState)
   const prosperity = prosperityIndex(nextState)
   const strengthNote =
-    used > 0 ? ` (diminished use #${used + 1})` : ''
+    used > 0 ? ` (diminished use #${used + 1} of ${MAX_ACTION_USES})` : ''
 
-  const log = [
-    ...state.log,
-    `Turn ${turn}: ${action.name}${strengthNote} → pressure ${pressure.toFixed(0)}, prosperity ${prosperity.toFixed(0)}. BAU drift applied. ${action.tradeoff}`,
+  const factorBits: string[] = []
+  for (const key of Object.keys(effects) as FactorKey[]) {
+    const before = state.factors[key]
+    const after = factors[key]
+    if (Math.abs(after - before) < 0.05) continue
+    const label = FACTOR_LABELS[key]
+    factorBits.push(
+      `${label} ${before.toFixed(0)}→${after.toFixed(0)} (${after >= before ? '+' : ''}${(after - before).toFixed(0)})`,
+    )
+  }
+
+  const dP = pressure - pressureBefore
+  const dPr = prosperity - prosperityBefore
+  const logLine = [
+    `Turn ${turn}: ${action.name}${strengthNote}.`,
+    `Emissions pressure ${pressureBefore.toFixed(0)} → ${pressure.toFixed(0)} (${dP >= 0 ? '+' : ''}${dP.toFixed(0)}).`,
+    `Prosperity ${prosperityBefore.toFixed(0)} → ${prosperity.toFixed(0)} (${dPr >= 0 ? '+' : ''}${dPr.toFixed(0)}).`,
+    `Kaya target: ${action.kayaTarget}.`,
+    factorBits.length ? `Bars after usual growth: ${factorBits.join('; ')}.` : null,
+    `What it means: ${action.tradeoff}`,
+    `In the real world: ${action.realWorld}`,
   ]
+    .filter(Boolean)
+    .join(' ')
+
+  const log = [...state.log, logLine]
 
   let status: GameStatus = 'playing'
   if (pressure <= WIN_CO2 && prosperity >= MIN_AFFLUENCE) {
     status = 'won'
     log.push(
-      `Victory: emissions pressure ${pressure.toFixed(0)} (≤${WIN_CO2}) with prosperity ${prosperity.toFixed(0)}. Systems > silver bullets.`,
+      `Result: you won. Emissions pressure ${pressure.toFixed(0)} (need ${WIN_CO2} or less) with prosperity ${prosperity.toFixed(0)} (need ${MIN_AFFLUENCE} or more). You cut intensity hard enough that usual growth did not erase the win. This is a practice game, not advice.`,
     )
   } else if (prosperity < MIN_AFFLUENCE) {
     status = 'lost_economy'
     log.push(
-      `Defeat: prosperity ${prosperity.toFixed(0)} fell below ${MIN_AFFLUENCE}. Crushing emissions by impoverishment is not the win.`,
+      `Result: you lost. Prosperity ${prosperity.toFixed(0)} fell below ${MIN_AFFLUENCE}. Cutting emissions by making people much poorer fails the mission on purpose.`,
     )
   } else if (turn >= MAX_TURNS) {
     status = 'lost_turns'
     log.push(
-      `Defeat: out of turns. Pressure ${pressure.toFixed(0)} (need ≤${WIN_CO2}). Intensity cuts must outrun BAU growth.`,
+      `Result: you lost. Out of turns with pressure ${pressure.toFixed(0)} (need ${WIN_CO2} or less). Usual population and prosperity growth outran your intensity cuts.`,
     )
   }
 

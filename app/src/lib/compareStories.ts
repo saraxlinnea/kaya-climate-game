@@ -13,41 +13,45 @@ export const COMPARE_STORIES: CompareStory[] = [
     a: 'USA',
     b: 'CHN',
     label: 'United States · China',
-    lesson: 'Peak-and-decline vs scale and growth — intensity must outrun affluence.',
+    lesson:
+      'One large emitter with a peak-and-decline pattern; another where scale and growth still dominate totals.',
   },
   {
     id: 'deu-pol',
     a: 'DEU',
     b: 'POL',
     label: 'Germany · Poland',
-    lesson: 'Neighbors on different coal and industrial paths.',
+    lesson: 'Neighbors with different coal and industrial paths over the same decades.',
   },
   {
     id: 'fra-pol',
     a: 'FRA',
     b: 'POL',
     label: 'France · Poland',
-    lesson: 'Clean nuclear grid vs coal-heavy power — electrify only helps if electrons are clean.',
+    lesson:
+      'A nuclear-heavy grid versus coal-heavy power. Electrifying vehicles helps more where the grid is already clean.',
   },
   {
     id: 'gbr-aus',
     a: 'GBR',
     b: 'AUS',
     label: 'United Kingdom · Australia',
-    lesson: 'Post-industrial cut vs resource-exporter economy.',
+    lesson: 'A post-industrial cut in coal power versus a resource-oriented energy mix.',
   },
   {
     id: 'swe-ind',
     a: 'SWE',
     b: 'IND',
     label: 'Sweden · India',
-    lesson: 'Already-lean intensities vs development pathway under rising demand.',
+    lesson:
+      'An already-lean energy system versus a development pathway under rising demand.',
   },
   {
     id: 'hkg-sgp',
     a: 'HKG',
     b: 'SGP',
     label: 'Hong Kong · Singapore',
-    lesson: 'Trade hubs — watch consumption vs territorial CO₂, not just production.',
+    lesson:
+      'Trade hubs where consumption-based emissions can diverge from what is produced on site.',
   },
 ]

@@ -11,7 +11,7 @@ export function HistoryComparePanel({ compare }: Props) {
       <h2 className="panel-title">Your run vs history</h2>
       <p className="panel-note">
         Player path ({compare.playerWindow}) vs real recorded change ({compare.historyWindow}).
-        Illustrative — not a calibrated forecast.
+        Illustrative only. Not a detailed forecast.
       </p>
 
       <table className="compare-table">

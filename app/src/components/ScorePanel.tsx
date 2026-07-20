@@ -2,10 +2,10 @@ import { Link } from 'react-router-dom'
 import type { ScoreRow } from '../types'
 
 const PARTS: { key: keyof ScoreRow; label: string }[] = [
-  { key: 'score_decarbonization', label: 'Decarbonization' },
-  { key: 'score_prosperity', label: 'Prosperity' },
-  { key: 'score_efficiency', label: 'Efficiency' },
-  { key: 'score_clean', label: 'Clean energy' },
+  { key: 'score_decarbonization', label: 'Cutting CO₂' },
+  { key: 'score_prosperity', label: 'Raising income' },
+  { key: 'score_efficiency', label: 'Using less energy per $' },
+  { key: 'score_clean', label: 'Cleaning the energy mix' },
 ]
 
 type Props = {
@@ -16,13 +16,14 @@ export function ScorePanel({ score }: Props) {
   if (!score) {
     return (
       <section className="panel">
-        <h2 className="panel-title">Kaya Score</h2>
+        <h2 className="panel-title">Kaya Champion score</h2>
         <p className="panel-note">
-          No score for this country under the default eligibility rules (see SCORING.md).
+          This country is not scored under the default eligibility rules (population and emissions
+          size in 2000). See Methods for details.
         </p>
         <p className="muted">
           <Link className="country-link" to="/rankings">
-            View leaderboard
+            View the leaderboard
           </Link>
         </p>
       </section>
@@ -31,9 +32,11 @@ export function ScorePanel({ score }: Props) {
 
   return (
     <section className="panel">
-      <h2 className="panel-title">Kaya Score</h2>
+      <h2 className="panel-title">Kaya Champion score</h2>
       <p className="panel-note">
-        Decoupling score for {score.start_year}–{score.end_year} (not “lowest emissions”).{' '}
+        Our site score for {score.start_year} to {score.end_year}. It rewards cutting emissions while
+        raising income and improving intensity. It is not a ranking of lowest absolute emissions or
+        of how clean the country is today.{' '}
         <Link className="country-link" to="/rankings">
           Full rankings
         </Link>

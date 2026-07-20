@@ -1,10 +1,16 @@
 import type { KayaRow } from '../types'
 
-export function pctChange(start: number, end: number): number {
+/**
+ * Percent change start→end. Returns null when the baseline is zero/missing
+ * so UI never renders Infinity% or NaN%.
+ */
+export function pctChange(start: number, end: number): number | null {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start === 0) return null
   return ((end - start) / start) * 100
 }
 
-export function formatPct(value: number, digits = 1): string {
+export function formatPct(value: number | null | undefined, digits = 1): string {
+  if (value == null || !Number.isFinite(value)) return '—'
   const sign = value > 0 ? '+' : ''
   return `${sign}${value.toFixed(digits)}%`
 }
@@ -30,6 +36,11 @@ export type Narrative = {
   result: string
 }
 
+function dirWord(pct: number | null, up: string, down: string): string {
+  if (pct == null) return 'changed'
+  return pct >= 0 ? up : down
+}
+
 /** Build a short systems narrative from first→last rows in the explorer window. */
 export function buildNarrative(series: KayaRow[]): Narrative | null {
   if (series.length < 2) return null
@@ -45,23 +56,23 @@ export function buildNarrative(series: KayaRow[]): Narrative | null {
   const belowPeak = end.co2 < peak.co2 * 0.98 && peak.year !== end.year
 
   const bullets = [
-    `Population ${pop >= 0 ? 'increased' : 'decreased'} (${formatPct(pop)})`,
-    `GDP per capita ${gdpPc >= 0 ? 'increased' : 'decreased'} (${formatPct(gdpPc)})`,
-    `Energy intensity ${ei < 0 ? 'improved' : 'worsened'} (${formatPct(ei)}; energy per dollar of GDP)`,
-    `Carbon intensity ${ci < 0 ? 'improved' : 'worsened'} (${formatPct(ci)}; CO₂ per unit energy)`,
+    `Population ${dirWord(pop, 'increased', 'decreased')} (${formatPct(pop)})`,
+    `GDP per capita ${dirWord(gdpPc, 'increased', 'decreased')} (${formatPct(gdpPc)})`,
+    `Energy intensity ${ei != null && ei < 0 ? 'improved' : 'worsened'} (${formatPct(ei)}; energy per dollar of GDP)`,
+    `Carbon intensity ${ci != null && ci < 0 ? 'improved' : 'worsened'} (${formatPct(ci)}; CO₂ per unit energy)`,
   ]
 
   let result: string
-  if (co2 < -2 && gdpPc > 0) {
-    result = `Result: emissions fell while prosperity rose — a decoupling pattern over ${start.year}–${end.year}.`
-  } else if (belowPeak && gdpPc > 0) {
-    result = `Result: emissions peaked in ${peak.year} and later declined even as the economy grew.`
-  } else if (co2 > 5 && (ei < 0 || ci < 0)) {
-    result = `Result: emissions still rose overall, even though intensity improved — scale outpaced efficiency.`
-  } else if (co2 > 5) {
-    result = `Result: emissions increased over ${start.year}–${end.year}; growth and/or dirtier energy dominated.`
+  if (co2 != null && co2 < -2 && gdpPc != null && gdpPc > 0) {
+    result = `From ${start.year} to ${end.year}, emissions fell while income per person rose. That combination is often called decoupling.`
+  } else if (belowPeak && gdpPc != null && gdpPc > 0) {
+    result = `Emissions peaked in ${peak.year} and later declined even as the economy grew.`
+  } else if (co2 != null && co2 > 5 && ((ei != null && ei < 0) || (ci != null && ci < 0))) {
+    result = `Emissions still rose overall, even though intensity improved. Scale outpaced efficiency.`
+  } else if (co2 != null && co2 > 5) {
+    result = `Emissions increased from ${start.year} to ${end.year}. Growth, dirtier energy, or both outweighed efficiency gains.`
   } else {
-    result = `Result: emissions changed by ${formatPct(co2)} from ${start.year} to ${end.year} through interacting Kaya factors.`
+    result = `Emissions changed by ${formatPct(co2)} from ${start.year} to ${end.year}. The Kaya factors moved in different directions.`
   }
 
   return { bullets, result }
@@ -104,32 +115,36 @@ export function buildConsumptionNarrative(series: KayaRow[]): ConsumptionNarrati
 
   if (gapEnd > t1 * 0.05) {
     bullets.push(
-      `Latest gap: consumption is ${formatCompact(gapEnd, 'mt')} higher than territorial (${formatPct(gapPctOfTerr, 0)} of production) — a net importer of embodied emissions`,
+      `Latest gap: consumption is ${formatCompact(gapEnd, 'mt')} higher than territorial (${formatPct(gapPctOfTerr, 0)} of production). This country is a net importer of emissions in traded goods.`,
     )
   } else if (gapEnd < -t1 * 0.05) {
     bullets.push(
-      `Latest gap: consumption is ${formatCompact(Math.abs(gapEnd), 'mt')} lower than territorial — a net exporter of embodied emissions`,
+      `Latest gap: consumption is ${formatCompact(Math.abs(gapEnd), 'mt')} lower than territorial. This country is a net exporter of emissions in traded goods.`,
     )
   } else {
-    bullets.push('Latest territorial and consumption totals are close — trade is not the main story here')
+    bullets.push('Latest territorial and consumption totals are close. Trade is not the main story here.')
   }
 
   const gapWidened = Math.abs(gapEnd) > Math.abs(gapStart) * 1.15
   let result: string
-  if (gapEnd > 0 && terrPct < -2 && consPct > -2) {
+  if (gapEnd > 0 && terrPct != null && terrPct < -2 && (consPct == null || consPct > -2)) {
     result =
-      'Production fell faster than the consumption footprint — offshoring can improve the territorial chart without shrinking demand.'
-  } else if (gapEnd < 0 && terrPct > 2) {
+      'Production fell faster than the consumption footprint. Offshoring can improve the territorial chart without shrinking demand at home.'
+  } else if (gapEnd < 0 && terrPct != null && terrPct > 2) {
     result =
-      'Territorial emissions rose while consumption stayed lower — export-oriented production can inflate the production ledger.'
+      'Territorial emissions rose while consumption stayed lower. Export-oriented production can inflate the production ledger.'
   } else if (gapWidened && Math.abs(gapEnd) > Math.abs(t1) * 0.08) {
     result =
-      'The territorial–consumption gap widened. Trade composition matters alongside Kaya intensity levers.'
+      'The gap between territorial and consumption emissions widened. Trade composition matters alongside intensity.'
   } else {
     result =
-      'Both series move together more than they diverge — still check the gap before treating production as the whole footprint.'
+      'Both series move together more than they diverge. Still check the gap before treating production as the whole footprint.'
   }
 
   return { bullets, result }
 }
 
+/** Reconstruct territorial CO₂ from Kaya factors (mechanical identity check). */
+export function kayaProduct(row: KayaRow): number {
+  return row.population * row.gdp_per_capita * row.energy_intensity * row.carbon_intensity
+}

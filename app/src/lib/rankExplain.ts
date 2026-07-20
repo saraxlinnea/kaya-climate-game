@@ -60,7 +60,7 @@ export function explainRank(
   rank: number,
   sortKey: RankSortKey,
 ): RankExplanation {
-  const window = `${row.start_year}–${row.end_year}`
+  const window = `${row.start_year} to ${row.end_year}`
   const drivers = topDrivers(row)
 
   const bullets = [
@@ -72,7 +72,7 @@ export function explainRank(
 
   let headline: string
   if (sortKey === 'kaya_score') {
-    headline = `#${rank} overall: ${row.kaya_score.toFixed(0)}/100 — strongest pulls from ${drivers.join(' + ')} (${window}).`
+    headline = `#${rank} overall: ${row.kaya_score.toFixed(0)}/100. Strongest pulls from ${drivers.join(' + ')} (${window}).`
   } else if (sortKey === 'score_decarbonization') {
     headline = `#${rank} on CO₂ cuts: ${formatPct(row.co2_pct)} over ${window}.`
   } else if (sortKey === 'score_prosperity') {
@@ -90,13 +90,13 @@ export function explainRank(
     row.gdp_per_capita_pct > 0.3
   ) {
     context =
-      'Often ranks high after 2000 because of real post-transition / EU-integration efficiency gains plus rising incomes — trajectory scoring, not “already richest or cleanest.”'
+      'Often ranks high after 2000 because of real efficiency gains and rising incomes after economic transition and EU integration. This score rewards change over time, not already being richest or cleanest.'
   } else if (row.co2_pct > 0.5 && row.gdp_per_capita_pct > 0.8) {
     context =
-      'Fast scale-up: prosperity soared while total CO₂ still rose. Intensity may have improved, but volume outran it — mixed Champion score by design.'
+      'Fast scale-up: prosperity soared while total CO₂ still rose. Intensity may have improved, but volume outran it. That leads to a mixed Champion score by design.'
   } else if (row.co2_pct < -0.15 && row.gdp_per_capita_pct > 0.1) {
     context =
-      'Classic decoupling pattern in this window: emissions down while GDP/capita up.'
+      'Classic cleaner-growth pattern in this window: emissions down while GDP per person up.'
   }
 
   return { headline, bullets, context }

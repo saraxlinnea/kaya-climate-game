@@ -82,17 +82,17 @@ export function buildHistoryCompare(
 
   let summary: string
   if (state.status === 'won' && histDecouple) {
-    summary = `History already showed decoupling (${start.year}–${end.year}). Your run pushed pressure further on a compressed timeline.`
+    summary = `History already showed cleaner growth from ${start.year} to ${end.year}. Your run pushed pressure further on a short timeline.`
   } else if (state.status === 'won' && !histDecouple) {
-    summary = `Historically, ${state.country} did not fully decouple over ${start.year}–${end.year}. Your winning path is a counterfactual — intensity had to outrun scale.`
+    summary = `In real history, ${state.country} did not fully grow cleaner from ${start.year} to ${end.year}. Your winning path is a what-if: intensity had to fall faster than scale rose.`
   } else if (playerDecouple && !histDecouple) {
-    summary = `You bent intensity harder than history, but didn’t hit the win target in time (or prosperity slipped).`
+    summary = `You bent intensity harder than history, but did not hit the win target in time (or prosperity slipped).`
   } else {
-    summary = `Side-by-side: your short scenario vs ${state.country}’s real ${start.year}–${end.year} path. History is not a turn-based game — treat this as intuition, not proof.`
+    summary = `Side by side: your short scenario versus ${state.country}’s real path from ${start.year} to ${end.year}. History is not a turn-based game. Treat this as intuition, not proof.`
   }
 
   return {
-    historyWindow: `${start.year}–${end.year}`,
+    historyWindow: `${start.year} to ${end.year}`,
     playerWindow: `${state.turn} turns from ${state.year} seed`,
     metrics,
     summary,

@@ -7,6 +7,7 @@ import {
   MAX_TURNS,
   MIN_AFFLUENCE,
   WIN_CO2,
+  type ClimateAction,
 } from '../game/actions'
 import {
   actionUsesRemaining,
@@ -24,10 +25,12 @@ import {
 import { buildHistoryCompare } from '../game/historyCompare'
 import { buildRunReport } from '../game/reportCard'
 import { COMBAT_SCENARIOS } from '../game/scenarios'
+import { flagEmoji } from '../lib/flagEmoji'
 import { seriesForCountry } from '../lib/loadData'
 import { usePageTitle } from '../lib/usePageTitle'
 import { BrandHeader } from './BrandHeader'
 import { HistoryComparePanel } from './HistoryComparePanel'
+import { MonsterFigure, pressureFill } from './MonsterFigure'
 import { RunReportPanel } from './RunReportPanel'
 import { SiteFooter } from './SiteFooter'
 
@@ -39,6 +42,68 @@ type Props = {
 
 function barWidth(value: number, scaleMax = 100): string {
   return `${Math.min(100, Math.max(0, (value / scaleMax) * 100))}%`
+}
+
+const MAIN_ACTIONS = ACTIONS.filter((a) => !a.spicy)
+const HAIL_MARY_ACTIONS = ACTIONS.filter((a) => a.spicy)
+
+type ActionMoveProps = {
+  action: ClimateAction
+  state: GameState
+  playing: boolean
+  preview: ActionPreview | null
+  onPreview: (actionId: string, preview: ActionPreview | null) => void
+  onPlay: (actionId: string) => void
+}
+
+function ActionMove({ action, state, playing, preview, onPreview, onPlay }: ActionMoveProps) {
+  const left = actionUsesRemaining(state, action.id)
+  const exhausted = left <= 0
+
+  function showPreview() {
+    if (!playing || exhausted) return
+    onPreview(action.id, previewAction(state, action.id))
+  }
+
+  return (
+    <button
+      type="button"
+      className={`action-card compact${action.spicy ? ' spicy' : ''}${exhausted ? ' exhausted' : ''}`}
+      disabled={!playing || exhausted}
+      onMouseEnter={showPreview}
+      onMouseLeave={() => onPreview(action.id, null)}
+      onFocus={showPreview}
+      onBlur={() => onPreview(action.id, null)}
+      onClick={() => onPlay(action.id)}
+    >
+      <span className="action-card-main">
+        <strong>{action.name}</strong>
+        <span className="action-target">
+          {action.kayaTarget}
+          {' · '}
+          {exhausted ? 'exhausted' : `${left} left`}
+        </span>
+      </span>
+      <span className="action-details">
+        <span className="action-blurb">{action.blurb}</span>
+        <span className="action-tradeoff">
+          <em>Tradeoff:</em> {action.tradeoff}
+        </span>
+        <span className="action-realworld">
+          <em>In the real world:</em> {action.realWorld}
+        </span>
+        {preview && (
+          <span className="action-card-preview">
+            This turn: pressure {preview.pressureDelta >= 0 ? '+' : ''}
+            {preview.pressureDelta.toFixed(1)}
+            {' · prosperity '}
+            {preview.prosperityDelta >= 0 ? '+' : ''}
+            {preview.prosperityDelta.toFixed(1)}
+          </span>
+        )}
+      </span>
+    </button>
+  )
 }
 
 export function Battle({ countries, rows, iso }: Props) {
@@ -92,7 +157,7 @@ export function Battle({ countries, rows, iso }: Props) {
     )
   }, [iso, seedRow, historyStart, peerMedians])
 
-  usePageTitle(seedRow ? `Combat — ${seedRow.country}` : 'Combat — Kaya Climate')
+  usePageTitle(seedRow ? `Combat: ${seedRow.country}` : 'Combat: Kaya Climate')
 
   const compare = useMemo(() => {
     if (!state || state.status === 'playing') return null
@@ -124,7 +189,7 @@ export function Battle({ countries, rows, iso }: Props) {
   if (!seedRow || !state) {
     return (
       <div className="app-shell">
-        <BrandHeader subtitle="Kaya Combat — satirical policy arena." />
+        <BrandHeader subtitle="Kaya Combat is a practice game about the four parts of emissions." />
         <p className="error">No Kaya data for this country.</p>
       </div>
     )
@@ -132,53 +197,62 @@ export function Battle({ countries, rows, iso }: Props) {
 
   const pressure = emissionsPressure(state)
   const prosperity = prosperityIndex(state)
+  const monsterScale = Math.max(0.72, Math.min(1.12, pressure / 100))
   const playing = state.status === 'playing'
+  const meterColor = pressureFill(pressure)
+  const flag = flagEmoji(state.iso)
 
   return (
     <div className="app-shell page-enter">
-      <BrandHeader subtitle="Kaya Combat: country-seeded monster, diminishing returns, then compare to history." />
+      <BrandHeader subtitle="Kaya Combat is a practice game. Pick a country, try policy moves, then compare your path to real history." />
 
       <section className="panel">
         <div className="controls">
           <div className="field">
-            <label htmlFor="battle-country">Arena country</label>
+            <label htmlFor="battle-country">Country</label>
             <select
               id="battle-country"
               value={iso}
               onChange={(e) => navigate(`/battle/${e.target.value}`)}
             >
-              {countries.map((c) => (
-                <option key={c.iso_code} value={c.iso_code}>
-                  {c.country}
-                </option>
-              ))}
+              {countries.map((c) => {
+                const f = flagEmoji(c.iso_code)
+                return (
+                  <option key={c.iso_code} value={c.iso_code}>
+                    {f ? `${f} ${c.country}` : c.country}
+                  </option>
+                )
+              })}
             </select>
           </div>
           <div className="field">
-            <label>Mission</label>
+            <label>Goal</label>
             <div className="muted" style={{ padding: '0.65rem 0' }}>
-              Cut pressure to ≤{WIN_CO2} in {MAX_TURNS} turns · keep prosperity ≥{MIN_AFFLUENCE} ·
-              each action max {MAX_ACTION_USES}×
+              Lower emissions pressure to {WIN_CO2} or less in {MAX_TURNS} turns. Keep prosperity at{' '}
+              {MIN_AFFLUENCE} or higher. You can use each move up to {MAX_ACTION_USES} times.
             </div>
           </div>
         </div>
 
         <div className="scenario-row" style={{ marginTop: '1rem' }}>
           <p className="muted" style={{ margin: '0 0 0.5rem' }}>
-            Scenario presets
+            Suggested countries
           </p>
           <div className="filter-row">
-            {availableScenarios.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className={iso === s.iso ? 'filter-chip active' : 'filter-chip'}
-                title={s.blurb}
-                onClick={() => navigate(`/battle/${s.iso}`)}
-              >
-                {s.label}
-              </button>
-            ))}
+            {availableScenarios.map((s) => {
+              const scenarioFlag = flagEmoji(s.iso)
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={iso === s.iso ? 'filter-chip active' : 'filter-chip'}
+                  title={s.blurb}
+                  onClick={() => navigate(`/battle/${s.iso}`)}
+                >
+                  {scenarioFlag ? `${scenarioFlag} ${s.label}` : s.label}
+                </button>
+              )
+            })}
           </div>
           {availableScenarios.find((s) => s.iso === iso) && (
             <p className="muted" style={{ marginTop: '0.55rem' }}>
@@ -188,141 +262,146 @@ export function Battle({ countries, rows, iso }: Props) {
         </div>
       </section>
 
-      <div className="layout-split" style={{ marginTop: '1rem' }}>
-        <section className="panel monster-panel">
-          <div className="monster-face" aria-hidden>
-            <div className="monster-eye" />
-            <div className="monster-eye" />
-            <div className="monster-mouth" />
-          </div>
-          <h1 className="panel-title">CO₂ Monster — {state.country}</h1>
-          <p className="panel-note">
-            Seeded from {state.year} ({state.baselineCo2Mt.toFixed(0)} Mt). Energy & carbon bars
-            start relative to peer medians; population & prosperity start at 100. Each turn also
-            applies this country’s historical BAU drift.
-          </p>
+      <section className="panel monster-panel" style={{ marginTop: '1rem' }}>
+        <h1 className="panel-title">
+          CO₂ Monster: {flag ? `${flag} ` : ''}
+          {state.country}
+        </h1>
+        <p className="panel-note monster-seed-note">
+          This fight starts from {state.year} data ({state.baselineCo2Mt.toFixed(0)} Mt of CO₂). Energy
+          use and dirty energy start relative to other countries. Population and prosperity start at
+          100. Each turn also adds the usual growth this country has seen in history. The monster’s
+          color and limbs follow emissions pressure (not the Champion ranking score).
+        </p>
 
-          <div className="monster-meter">
-            <div className="monster-meter-label">
-              <span>Emissions pressure</span>
-              <strong>{pressure.toFixed(0)}</strong>
-            </div>
-            <div className="score-track monster-co2-track">
-              <div className="score-fill monster-co2-fill" style={{ width: barWidth(pressure) }} />
-            </div>
-            <p className="muted">
-              ~{estimatedCo2Mt(state).toFixed(0)} Mt implied · Prosperity {prosperity.toFixed(0)} ·
-              Turn {state.turn}/{MAX_TURNS}
-            </p>
-          </div>
-
-          <div className="health-bars">
-            {(Object.keys(FACTOR_LABELS) as (keyof typeof FACTOR_LABELS)[]).map((key) => (
-              <div className="health-row" key={key}>
-                <span>{FACTOR_LABELS[key]}</span>
-                <div className="score-track">
-                  <div
-                    className={`score-fill health-${key}`}
-                    style={{ width: barWidth(state.factors[key], 150) }}
-                  />
-                </div>
-                <output>{state.factors[key].toFixed(0)}</output>
+        <div className="monster-arena">
+          <MonsterFigure pressure={pressure} scale={monsterScale} />
+          <div className="monster-arena-stats">
+            <div className="monster-meter">
+              <div className="monster-meter-label">
+                <span>Emissions pressure</span>
+                <strong style={{ color: meterColor }}>{pressure.toFixed(0)}</strong>
               </div>
-            ))}
-          </div>
+              <div className="score-track monster-co2-track">
+                <div
+                  className="score-fill monster-co2-fill"
+                  style={{ width: barWidth(pressure), background: meterColor }}
+                />
+              </div>
+              <p className="muted">
+                About {estimatedCo2Mt(state).toFixed(0)} Mt implied · Prosperity {prosperity.toFixed(0)} ·
+                Turn {state.turn}/{MAX_TURNS}
+              </p>
+            </div>
 
+            <div className="health-bars">
+              {(Object.keys(FACTOR_LABELS) as (keyof typeof FACTOR_LABELS)[]).map((key) => (
+                <div className="health-row" key={key}>
+                  <span>{FACTOR_LABELS[key]}</span>
+                  <div className="score-track">
+                    <div
+                      className={`score-fill health-${key}`}
+                      style={{ width: barWidth(state.factors[key], 150) }}
+                    />
+                  </div>
+                  <output>{state.factors[key].toFixed(0)}</output>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="battle-actions-row">
+          <button type="button" className="filter-chip" onClick={resetFight}>
+            Reset fight
+          </button>
+          <Link className="country-link" to={`/country/${iso}`}>
+            Open explorer
+          </Link>
+        </div>
+      </section>
+
+      <section className="panel" style={{ marginTop: '1rem' }}>
+        <h2 className="panel-title">Policy moves</h2>
+        <p className="panel-note">
+          Hover or focus a card to see what it means, what it costs, and how pressure and prosperity
+          would change this turn (including usual growth). Moves get weaker if you repeat them. Max{' '}
+          {MAX_ACTION_USES} uses each. This is a learning game, not advice.
+        </p>
+        <div className="action-grid action-grid-compact">
+          {MAIN_ACTIONS.map((action) => (
+            <ActionMove
+              key={action.id}
+              action={action}
+              state={state}
+              playing={playing}
+              preview={hoverPreview?.id === action.id ? hoverPreview.preview : null}
+              onPreview={(id, next) => {
+                if (!next) {
+                  setHoverPreview((prev) => (prev?.id === id ? null : prev))
+                  return
+                }
+                setHoverPreview({ id, name: action.name, preview: next })
+              }}
+              onPlay={(id) => {
+                setHoverPreview(null)
+                setState((prev) => (prev ? applyAction(prev, id) : prev))
+              }}
+            />
+          ))}
+        </div>
+
+        <h3 className="action-group-title">Hail mary moves</h3>
+        <p className="panel-note">
+          These are big, risky, or slow ideas. Hover to see why they often do not win by themselves.
+        </p>
+        <div className="action-grid action-grid-compact">
+          {HAIL_MARY_ACTIONS.map((action) => (
+            <ActionMove
+              key={action.id}
+              action={action}
+              state={state}
+              playing={playing}
+              preview={hoverPreview?.id === action.id ? hoverPreview.preview : null}
+              onPreview={(id, next) => {
+                if (!next) {
+                  setHoverPreview((prev) => (prev?.id === id ? null : prev))
+                  return
+                }
+                setHoverPreview({ id, name: action.name, preview: next })
+              }}
+              onPlay={(id) => {
+                setHoverPreview(null)
+                setState((prev) => (prev ? applyAction(prev, id) : prev))
+              }}
+            />
+          ))}
+        </div>
+      </section>
+
+      {!playing && (
+        <section className="panel" style={{ marginTop: '1rem' }}>
+          <h2 className="panel-title">Resolution</h2>
           {state.status === 'won' && (
-            <p className="battle-banner win">You weakened the monster without torching prosperity.</p>
+            <p className="battle-banner win">
+              Victory. You cut emissions pressure to {pressure.toFixed(0)} (need {WIN_CO2} or less)
+              while keeping prosperity at {prosperity.toFixed(0)} (need {MIN_AFFLUENCE} or more).
+            </p>
           )}
           {state.status === 'lost_turns' && (
-            <p className="battle-banner lose">Out of turns. BAU growth outran your cuts.</p>
-          )}
-          {state.status === 'lost_economy' && (
-            <p className="battle-banner lose">Prosperity cratered. That’s not the win.</p>
-          )}
-
-          <div className="battle-actions-row">
-            <button type="button" className="filter-chip" onClick={resetFight}>
-              Reset fight
-            </button>
-            <Link className="country-link" to={`/country/${iso}`}>
-              Open explorer
-            </Link>
-          </div>
-        </section>
-
-        <section className="panel">
-          <h2 className="panel-title">Policy moves</h2>
-          <p className="panel-note">
-            Hover a move to preview Δ pressure / prosperity (includes BAU). Repeats weaken;{' '}
-            {MAX_ACTION_USES} uses max.
-          </p>
-          {hoverPreview && playing && (
-            <p className="action-preview" aria-live="polite">
-              <strong>{hoverPreview.name}</strong>
-              {' → pressure '}
-              <span className={hoverPreview.preview.pressureDelta <= 0 ? 'delta-neg' : 'delta-pos'}>
-                {hoverPreview.preview.pressureDelta >= 0 ? '+' : ''}
-                {hoverPreview.preview.pressureDelta.toFixed(1)}
-              </span>
-              {' · prosperity '}
-              <span
-                className={hoverPreview.preview.prosperityDelta >= 0 ? 'delta-pos' : 'delta-neg'}
-              >
-                {hoverPreview.preview.prosperityDelta >= 0 ? '+' : ''}
-                {hoverPreview.preview.prosperityDelta.toFixed(1)}
-              </span>
-              <span className="muted">
-                {' '}
-                ({hoverPreview.preview.usesLeft} use
-                {hoverPreview.preview.usesLeft === 1 ? '' : 's'} left)
-              </span>
+            <p className="battle-banner lose">
+              Out of turns. Pressure finished at {pressure.toFixed(0)}; you needed {WIN_CO2} or less.
+              Usual growth outran your cuts.
             </p>
           )}
-          <div className="action-grid">
-            {ACTIONS.map((action) => {
-              const left = actionUsesRemaining(state, action.id)
-              const exhausted = left <= 0
-              return (
-                <button
-                  key={action.id}
-                  type="button"
-                  className={`action-card${action.spicy ? ' spicy' : ''}${exhausted ? ' exhausted' : ''}`}
-                  disabled={!playing || exhausted}
-                  onMouseEnter={() => {
-                    if (!playing || exhausted) return
-                    const preview = previewAction(state, action.id)
-                    if (preview) setHoverPreview({ id: action.id, name: action.name, preview })
-                  }}
-                  onMouseLeave={() =>
-                    setHoverPreview((prev) => (prev?.id === action.id ? null : prev))
-                  }
-                  onFocus={() => {
-                    if (!playing || exhausted) return
-                    const preview = previewAction(state, action.id)
-                    if (preview) setHoverPreview({ id: action.id, name: action.name, preview })
-                  }}
-                  onBlur={() =>
-                    setHoverPreview((prev) => (prev?.id === action.id ? null : prev))
-                  }
-                  onClick={() => {
-                    setHoverPreview(null)
-                    setState((prev) => (prev ? applyAction(prev, action.id) : prev))
-                  }}
-                >
-                  <strong>{action.name}</strong>
-                  <span className="action-target">
-                    {action.kayaTarget}
-                    {' · '}
-                    {exhausted ? 'exhausted' : `${left} left`}
-                  </span>
-                  <span className="action-blurb">{action.blurb}</span>
-                </button>
-              )
-            })}
-          </div>
+          {state.status === 'lost_economy' && (
+            <p className="battle-banner lose">
+              Prosperity fell to {prosperity.toFixed(0)} (floor {MIN_AFFLUENCE}). Making people much
+              poorer is not the win.
+            </p>
+          )}
         </section>
-      </div>
+      )}
 
       {report && (
         <div style={{ marginTop: '1rem' }}>
@@ -338,6 +417,10 @@ export function Battle({ countries, rows, iso }: Props) {
 
       <section className="panel" style={{ marginTop: '1rem' }}>
         <h2 className="panel-title">Battle log</h2>
+        <p className="panel-note">
+          Each turn shows how pressure and prosperity changed, which bars moved after usual growth,
+          and what the move means in the game and in real life.
+        </p>
         <ul className="battle-log">
           {[...state.log].reverse().map((line, i) => (
             <li key={`${i}-${line.slice(0, 24)}`}>{line}</li>

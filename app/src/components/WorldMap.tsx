@@ -71,7 +71,7 @@ export function WorldMap({ scores }: Props) {
     null,
   )
   const active = METRICS.find((m) => m.key === metric) ?? METRICS[0]
-  usePageTitle('World map — Kaya Climate')
+  usePageTitle('World map: Kaya Climate')
 
   useEffect(() => {
     let cancelled = false
@@ -125,14 +125,14 @@ export function WorldMap({ scores }: Props) {
 
   return (
     <div className="app-shell page-enter">
-      <BrandHeader subtitle="World map: choropleth of Kaya Champion scores — click a country to open the explorer." />
+      <BrandHeader subtitle="A map of Champion scores. Click a country to open the explorer." />
 
       <section className="panel">
         <h1 className="panel-title">Decoupling around the world</h1>
         <p className="panel-note">
           Window {windowLabel}. Color shows relative {active.label.toLowerCase()} among scored
-          Coarse Natural Earth 110m outlines omit some tiny jurisdictions (Hong Kong and Singapore
-          show as markers when they have a score).
+          countries, not absolute emissions. Coarse outlines omit some tiny jurisdictions. Hong Kong
+          and Singapore appear as markers when they have a score.
         </p>
 
         <div className="filter-row" style={{ marginBottom: '0.85rem' }}>
