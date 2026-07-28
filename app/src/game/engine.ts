@@ -3,13 +3,13 @@ import {
   ACTIONS,
   DIMINISH_FACTOR,
   MAX_ACTION_USES,
-  MAX_TURNS,
   MIN_AFFLUENCE,
   WIN_CO2,
   type ClimateAction,
   type FactorKey,
   type GameFactors,
 } from './actions'
+import { DEFAULT_FIGHT_RULES, type FightRules } from './challenges'
 
 export type GameStatus = 'playing' | 'won' | 'lost_turns' | 'lost_economy'
 
@@ -36,6 +36,8 @@ export type GameState = {
   actionUses: Record<string, number>
   log: string[]
   status: GameStatus
+  /** Turn cap and banned moves for named challenges. */
+  rules: FightRules
 }
 
 export type SeedContext = {
@@ -49,6 +51,8 @@ export type SeedContext = {
   /** Optional history for BAU drift (e.g. 2000 → latest). */
   historyStart?: KayaRow
   historyEnd?: KayaRow
+  /** Named-challenge rules; defaults to standard fight. */
+  rules?: FightRules
 }
 
 function clamp(n: number, lo: number, hi: number): number {
@@ -166,6 +170,13 @@ export function seedFromContext(ctx: SeedContext): GameState {
     }
   }
 
+  const rules = ctx.rules ?? { ...DEFAULT_FIGHT_RULES, bannedActionIds: [] }
+  const turnCap = rules.maxTurns
+  const banNote =
+    rules.bannedActionIds.length > 0
+      ? ` Challenge lock: ${rules.bannedActionIds.length} move${rules.bannedActionIds.length === 1 ? '' : 's'} banned.`
+      : ''
+
   return {
     iso: ctx.row.iso_code,
     country: ctx.row.country,
@@ -181,9 +192,10 @@ export function seedFromContext(ctx: SeedContext): GameState {
     log: [
       `The CO₂ Monster awakens in ${ctx.row.country} (${ctx.row.year}). ${eiNote} ${ciNote}`,
       gridNote,
-      `Each turn adds usual growth from this country’s history: population ×${bau.population.toFixed(3)}, prosperity ×${bau.affluence.toFixed(3)}. Cut emissions pressure to ${WIN_CO2} or less without dropping prosperity below ${MIN_AFFLUENCE}.`,
+      `Each turn adds usual growth from this country’s history: population ×${bau.population.toFixed(3)}, prosperity ×${bau.affluence.toFixed(3)}. Cut emissions pressure to ${WIN_CO2} or less without dropping prosperity below ${MIN_AFFLUENCE}. You have ${turnCap} turns.${banNote}`,
     ],
     status: 'playing',
+    rules,
   }
 }
 
@@ -233,7 +245,8 @@ export function previewEffects(
   }
 
   if (actionId === 'evs' || actionId === 'heat_pumps') {
-    // Prefer Ember electricity carbon intensity when available.
+    // Ember grid ratio sets electrify strength (not in-fight clean-power moves).
+    // Battle UI synergy copy documents this; do not invent extra multipliers here.
     if (
       state.gridIntensity != null &&
       state.medianGridIntensity != null &&
@@ -303,6 +316,13 @@ export function applyAction(state: GameState, actionId: string): GameState {
   const action = ACTIONS.find((a) => a.id === actionId)
   if (!action) return state
 
+  if (state.rules.bannedActionIds.includes(actionId)) {
+    return {
+      ...state,
+      log: [...state.log, `${action.name} is locked for this challenge.`],
+    }
+  }
+
   const used = state.actionUses[actionId] ?? 0
   if (used >= MAX_ACTION_USES) {
     return {
@@ -333,6 +353,7 @@ export function applyAction(state: GameState, actionId: string): GameState {
 
   const pressure = emissionsPressure(nextState)
   const prosperity = prosperityIndex(nextState)
+  const turnCap = state.rules.maxTurns
   const strengthNote =
     used > 0 ? ` (diminished use #${used + 1} of ${MAX_ACTION_USES})` : ''
 
@@ -374,7 +395,7 @@ export function applyAction(state: GameState, actionId: string): GameState {
     log.push(
       `Result: you lost. Prosperity ${prosperity.toFixed(0)} fell below ${MIN_AFFLUENCE}. Cutting emissions by making people much poorer fails the mission on purpose.`,
     )
-  } else if (turn >= MAX_TURNS) {
+  } else if (turn >= turnCap) {
     status = 'lost_turns'
     log.push(
       `Result: you lost. Out of turns with pressure ${pressure.toFixed(0)} (need ${WIN_CO2} or less). Usual population and prosperity growth outran your intensity cuts.`,
@@ -382,6 +403,48 @@ export function applyAction(state: GameState, actionId: string): GameState {
   }
 
   return { ...nextState, log, status }
+}
+
+/** Short end-state line from fight outcome (no new lore). */
+export function endStateOneLiner(state: GameState): string {
+  const pressure = emissionsPressure(state)
+  const prosperity = prosperityIndex(state)
+  if (state.status === 'won') {
+    return `Why: intensity cuts beat usual growth. Pressure ${pressure.toFixed(0)} with prosperity ${prosperity.toFixed(0)}.`
+  }
+  if (state.status === 'lost_economy') {
+    return `Why: prosperity hit the floor (${prosperity.toFixed(0)}, need ${MIN_AFFLUENCE}+). Impoverishment is not a win.`
+  }
+  if (state.status === 'lost_turns') {
+    if (pressure > WIN_CO2) {
+      return `Why: usual growth outran your cuts. Pressure stayed at ${pressure.toFixed(0)} (need ${WIN_CO2} or less).`
+    }
+    return `Why: out of turns before the win conditions lined up.`
+  }
+  return ''
+}
+
+/** Limb drop thresholds (must match MonsterFigure). */
+export const LIMB_THRESHOLDS = [90, 80, 70, 60] as const
+
+export function limbMilestoneMessage(threshold: number): string {
+  switch (threshold) {
+    case 90:
+      return 'Limb down: left arm dropped as pressure fell below 90.'
+    case 80:
+      return 'Limb down: right arm dropped as pressure fell below 80.'
+    case 70:
+      return 'Limb down: left leg dropped as pressure fell below 70.'
+    case 60:
+      return 'Limb down: right leg dropped. Win zone (pressure at or below 60).'
+    default:
+      return `Pressure crossed ${threshold}.`
+  }
+}
+
+/** Thresholds newly crossed when pressure falls from `before` to `after`. */
+export function crossedLimbThresholds(before: number, after: number): number[] {
+  return LIMB_THRESHOLDS.filter((t) => before > t && after <= t)
 }
 
 export function getAction(actionId: string): ClimateAction | undefined {

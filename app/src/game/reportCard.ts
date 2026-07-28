@@ -57,22 +57,18 @@ export function buildRunReport(state: GameState): RunReport {
       detail: 'You lowered the meter by making people poorer. That is not the win condition.',
     })
   }
-  const intensityUses =
-    (state.actionUses.solar ?? 0) +
-    (state.actionUses.nuclear ?? 0) +
-    (state.actionUses.buildings ?? 0) +
-    (state.actionUses.efficiency_industry ?? 0) +
-    (state.actionUses.coal_retire ?? 0) +
-    (state.actionUses.heat_pumps ?? 0) +
-    (state.actionUses.carbon_price ?? 0) +
-    (state.actionUses.fusion ?? 0) +
-    (state.actionUses.dac ?? 0)
+  const intensityUses = ACTIONS.filter(
+    (a) =>
+      a.category === 'clean_power' ||
+      a.category === 'efficiency' ||
+      a.category === 'electrify',
+  ).reduce((sum, a) => sum + (state.actionUses[a.id] ?? 0), 0)
   const popUses = state.actionUses.one_child ?? 0
   if (intensityUses >= 3 && popUses === 0) {
     badges.push({
       id: 'intensity',
       label: 'Intensity specialist',
-      detail: 'You focused on energy and carbon intensity, not population policy.',
+      detail: 'You focused on clean power, efficiency, or electrification, not population policy.',
     })
   }
   if (popUses >= 2) {
@@ -87,6 +83,24 @@ export function buildRunReport(state: GameState): RunReport {
       id: 'growth',
       label: 'Growth focus',
       detail: 'You kept raising income. Cleaner growth only works if intensity falls faster than scale rises.',
+    })
+  }
+  if ((state.actionUses.seawalls ?? 0) >= 2) {
+    badges.push({
+      id: 'adapt_only',
+      label: 'Adapt-only path',
+      detail: 'You spent turns on seawalls. Adaptation can matter in life, but it barely fights this emissions monster.',
+    })
+  }
+  const cleanPowerUses = ACTIONS.filter((a) => a.category === 'clean_power').reduce(
+    (sum, a) => sum + (state.actionUses[a.id] ?? 0),
+    0,
+  )
+  if (cleanPowerUses >= 4 && state.status === 'won') {
+    badges.push({
+      id: 'clean_power',
+      label: 'Clean-power push',
+      detail: 'You leaned on cleaning the energy mix. Pairing with efficiency still helps in real systems.',
     })
   }
   if ((state.actionUses.evs ?? 0) >= 1 && state.gridIntensity != null) {

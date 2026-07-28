@@ -5,6 +5,8 @@ import type { CSSProperties } from 'react'
 type Props = {
   pressure: number
   scale: number
+  /** Combat caption under the figure. Default true. */
+  showHint?: boolean
 }
 
 const WIN_ZONE = 60
@@ -21,7 +23,7 @@ export function pressureFill(pressure: number): string {
   return `rgb(${r}, ${g}, ${b})`
 }
 
-export function MonsterFigure({ pressure, scale }: Props) {
+export function MonsterFigure({ pressure, scale, showHint = true }: Props) {
   const fill = pressureFill(pressure)
   const showArmL = pressure >= 90
   const showArmR = pressure >= 80
@@ -83,13 +85,15 @@ export function MonsterFigure({ pressure, scale }: Props) {
         <circle className="monster-eye-dot" cx="72" cy="34" r="4" />
         <rect className="monster-mouth-bar" x="50" y="42" width="20" height="5" rx="1" />
       </svg>
-      <p className="monster-figure-hint">
-        {pressure >= 90
-          ? 'Fully formed. Pressure is high.'
-          : pressure >= 60
-            ? 'Losing limbs as pressure falls.'
-            : 'Win zone. The monster is falling apart.'}
-      </p>
+      {showHint ? (
+        <p className="monster-figure-hint">
+          {pressure >= 90
+            ? 'Fully formed. Pressure is high.'
+            : pressure >= 60
+              ? 'Losing limbs as pressure falls.'
+              : 'Win zone. The monster is falling apart.'}
+        </p>
+      ) : null}
     </div>
   )
 }

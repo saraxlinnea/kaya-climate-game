@@ -40,10 +40,12 @@ def validate(df: pd.DataFrame) -> str:
     missing_cols = [c for c in REQUIRED_COLS if c not in df.columns]
     if missing_cols:
         lines.append(f"FAIL missing columns: {missing_cols}")
-    else:
-        lines.append("OK required columns present")
-    lines.append(f"rows={len(df):,} countries={df['iso_code'].nunique()} "
-                 f"years={df['year'].min()}–{df['year'].max()}")
+        return "\n".join(lines).strip() + "\n"
+    lines.append("OK required columns present")
+    lines.append(
+        f"rows={len(df):,} countries={df['iso_code'].nunique()} "
+        f"years={df['year'].min()}–{df['year'].max()}"
+    )
 
     # --- concordance ---
     lines.append(section("Country concordance"))

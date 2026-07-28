@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { CountryOption, KayaRow, ScoreRow } from '../types'
 import { seriesForCountry } from '../lib/loadData'
@@ -115,6 +115,14 @@ export function CompareCountries({ countries, rows, scores }: Props) {
   const [isoB, setIsoB] = useState(defaultB)
 
   usePageTitle('Compare: Kaya Climate')
+
+  useEffect(() => {
+    const a = params.get('a')
+    const b = params.get('b')
+    if (!a || !b) {
+      navigate(`/compare?a=${defaultA}&b=${defaultB}`, { replace: true })
+    }
+  }, [params, navigate, defaultA, defaultB])
 
   const a = useMemo(() => snapshot(isoA, rows, scores), [isoA, rows, scores])
   const b = useMemo(() => snapshot(isoB, rows, scores), [isoB, rows, scores])

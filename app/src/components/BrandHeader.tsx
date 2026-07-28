@@ -39,14 +39,16 @@ export function SiteNav() {
 
 export function BrandHeader({ subtitle }: { subtitle: string }) {
   return (
-    <header className="brand-bar">
-      <div>
-        <p className="brand-mark">
-          KAYA <span>Climate</span>
-        </p>
-        <SiteNav />
+    <header className="page-chrome">
+      <div className="page-chrome-inner brand-bar">
+        <div>
+          <p className="brand-mark">
+            KAYA <span>Climate</span>
+          </p>
+          <SiteNav />
+        </div>
+        <p className="brand-sub">{subtitle}</p>
       </div>
-      <p className="brand-sub">{subtitle}</p>
     </header>
   )
 }

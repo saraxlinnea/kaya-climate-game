@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { KayaRow } from '../types'
-import { formatPct, pctChange } from '../lib/narrative'
+import { formatPct, pctChange, type Co2ChartAnnotations } from '../lib/narrative'
 
 type SeriesChartProps = {
   series: KayaRow[]
@@ -43,6 +43,25 @@ function buildPath(
     .join(' ')
 }
 
+function chartPoint(
+  year: number,
+  value: number,
+  x0: number,
+  x1: number,
+  y0: number,
+  y1: number,
+  w: number,
+  h: number,
+  pad: { l: number; r: number; t: number; b: number },
+): { x: number; y: number } {
+  const iw = w - pad.l - pad.r
+  const ih = h - pad.t - pad.b
+  return {
+    x: pad.l + ((year - x0) / (x1 - x0)) * iw,
+    y: pad.t + (1 - (value - y0) / (y1 - y0)) * ih,
+  }
+}
+
 const PAD = { l: 44, r: 12, t: 28, b: 36 }
 
 function ChartCaption({ children }: { children: ReactNode }) {
@@ -53,7 +72,11 @@ export function EmissionsChart({
   series,
   country,
   mode = 'territorial',
-}: SeriesChartProps & { mode?: 'territorial' | 'consumption' }) {
+  annotations,
+}: SeriesChartProps & {
+  mode?: 'territorial' | 'consumption'
+  annotations?: Co2ChartAnnotations | null
+}) {
   const w = 640
   const h = 280
   const terrPoints = series
@@ -131,6 +154,19 @@ export function EmissionsChart({
       ? `${country}: consumption CO₂`
       : `${country}: territorial CO₂`
 
+  const showPeak =
+    annotations?.peak &&
+    mode === 'territorial' &&
+    annotations.peak.year >= x0 &&
+    annotations.peak.year <= x1
+  const peakPt =
+    showPeak && annotations.peak
+      ? chartPoint(annotations.peak.year, annotations.peak.value, x0, x1, y0, y1, w, h, PAD)
+      : null
+  const peakLabelX = peakPt ? Math.min(w - PAD.r - 4, Math.max(PAD.l + 4, peakPt.x)) : 0
+  const peakLabelAnchor =
+    peakPt && peakPt.x > w * 0.72 ? 'end' : peakPt && peakPt.x < w * 0.28 ? 'start' : 'middle'
+
   return (
     <figure className="chart-wrap">
       <svg viewBox={`0 0 ${w} ${h}`} className="svg-chart" role="img" aria-label={title}>
@@ -163,6 +199,19 @@ export function EmissionsChart({
             className={`chart-line ${mode === 'consumption' ? 'chart-line-cons' : 'chart-line-co2'}`}
           />
         )}
+        {peakPt && annotations?.peak && (
+          <g className="chart-annotation">
+            <circle cx={peakPt.x} cy={peakPt.y} r={5} className="chart-peak-dot" />
+            <text
+              x={peakLabelX}
+              y={Math.max(PAD.t + 12, peakPt.y - 10)}
+              textAnchor={peakLabelAnchor}
+              className="chart-peak-label"
+            >
+              Peak {annotations.peak.year}
+            </text>
+          </g>
+        )}
         <text x={PAD.l} y={h - 10} className="chart-label">
           {x0}
         </text>
@@ -185,6 +234,20 @@ export function EmissionsChart({
             <i className="swatch chart-line-cons" /> Consumption
           </span>
         </div>
+      )}
+      {annotations && (annotations.peak || annotations.gdpUpCo2Down) && mode === 'territorial' && (
+        <ul className="chart-callouts">
+          {annotations.peak && (
+            <li>
+              Peak in {annotations.peak.year}:{' '}
+              {annotations.peak.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} Mt
+              (later years are lower in this series)
+            </li>
+          )}
+          {annotations.gdpUpCo2Down && (
+            <li>Over the full window, GDP per person rose while total CO₂ fell.</li>
+          )}
+        </ul>
       )}
       <ChartCaption>
         Million tonnes of CO₂ from {x0} to {x1}. Territorial emissions are produced inside the

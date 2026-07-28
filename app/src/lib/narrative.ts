@@ -36,6 +36,28 @@ export type Narrative = {
   result: string
 }
 
+/** Chart callouts derived only from the country series (no invented peaks). */
+export type Co2ChartAnnotations = {
+  /** Territorial CO₂ peak when the latest year is clearly below that peak. */
+  peak: { year: number; value: number } | null
+  /** Full-window: income per person up and territorial CO₂ down. */
+  gdpUpCo2Down: boolean
+}
+
+export function co2ChartAnnotations(series: KayaRow[]): Co2ChartAnnotations {
+  if (series.length < 2) return { peak: null, gdpUpCo2Down: false }
+  const start = series[0]
+  const end = series[series.length - 1]
+  const peak = series.reduce((best, row) => (row.co2 > best.co2 ? row : best), series[0])
+  const belowPeak = end.co2 < peak.co2 * 0.98 && peak.year !== end.year
+  const gdpPc = pctChange(start.gdp_per_capita, end.gdp_per_capita)
+  const co2 = pctChange(start.co2, end.co2)
+  return {
+    peak: belowPeak ? { year: peak.year, value: peak.co2 } : null,
+    gdpUpCo2Down: co2 != null && co2 < -2 && gdpPc != null && gdpPc > 0,
+  }
+}
+
 function dirWord(pct: number | null, up: string, down: string): string {
   if (pct == null) return 'changed'
   return pct >= 0 ? up : down

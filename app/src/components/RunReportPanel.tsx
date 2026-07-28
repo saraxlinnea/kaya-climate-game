@@ -21,15 +21,22 @@ export function RunReportPanel({ report }: Props) {
   return (
     <section className="panel report-panel">
       <h2 className="panel-title">Run report</h2>
+      <p className="modeled-banner compact" role="note">
+        Modeled / satirical · Pressure and prosperity below are game indices, not forecasts
+      </p>
       <p className="panel-note">{report.outcome}</p>
 
       <div className="report-stats">
         <div>
-          <span className="muted">Pressure</span>
+          <span className="muted">
+            Pressure <span className="modeled-badge">Modeled estimate</span>
+          </span>
           <strong>{report.pressure.toFixed(0)}</strong>
         </div>
         <div>
-          <span className="muted">Prosperity</span>
+          <span className="muted">
+            Prosperity <span className="modeled-badge">Modeled estimate</span>
+          </span>
           <strong>{report.prosperity.toFixed(0)}</strong>
         </div>
         <div>

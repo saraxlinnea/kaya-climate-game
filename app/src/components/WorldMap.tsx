@@ -10,6 +10,7 @@ import {
 } from '../lib/geoPath'
 import { MAP_POINT_MARKERS } from '../lib/mapMarkers'
 import { publicUrl } from '../lib/publicUrl'
+import { CHAMPION_DISCLAIMER, SITE_METHOD_BADGE } from '../lib/credibility'
 import { usePageTitle } from '../lib/usePageTitle'
 import { BrandHeader } from './BrandHeader'
 import { SiteFooter } from './SiteFooter'
@@ -130,9 +131,16 @@ export function WorldMap({ scores }: Props) {
       <section className="panel">
         <h1 className="panel-title">Decoupling around the world</h1>
         <p className="panel-note">
-          Window {windowLabel}. Color shows relative {active.label.toLowerCase()} among scored
-          countries, not absolute emissions. Coarse outlines omit some tiny jurisdictions. Hong Kong
-          and Singapore appear as markers when they have a score.
+          <span className="modeled-badge">{SITE_METHOD_BADGE}</span> Window {windowLabel}. Color
+          shows relative {active.label.toLowerCase()} among scored countries, not absolute emissions.
+          Coarse outlines omit some tiny jurisdictions. Hong Kong and Singapore appear as markers when
+          they have a score.
+        </p>
+        <p className="credibility-callout compact" role="note">
+          {CHAMPION_DISCLAIMER}{' '}
+          <Link className="country-link" to="/methods">
+            Methods
+          </Link>
         </p>
 
         <div className="filter-row" style={{ marginBottom: '0.85rem' }}>

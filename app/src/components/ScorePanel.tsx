@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { CHAMPION_DISCLAIMER, SITE_METHOD_BADGE } from '../lib/credibility'
 import type { ScoreRow } from '../types'
 
 const PARTS: { key: keyof ScoreRow; label: string }[] = [
@@ -25,6 +26,10 @@ export function ScorePanel({ score }: Props) {
           <Link className="country-link" to="/rankings">
             View the leaderboard
           </Link>
+          {' · '}
+          <Link className="country-link" to="/methods">
+            Methods
+          </Link>
         </p>
       </section>
     )
@@ -34,11 +39,17 @@ export function ScorePanel({ score }: Props) {
     <section className="panel">
       <h2 className="panel-title">Kaya Champion score</h2>
       <p className="panel-note">
-        Our site score for {score.start_year} to {score.end_year}. It rewards cutting emissions while
-        raising income and improving intensity. It is not a ranking of lowest absolute emissions or
-        of how clean the country is today.{' '}
+        <span className="modeled-badge">{SITE_METHOD_BADGE}</span> Our site score for{' '}
+        {score.start_year} to {score.end_year}. It rewards cutting emissions while raising income and
+        improving intensity.{' '}
         <Link className="country-link" to="/rankings">
           Full rankings
+        </Link>
+      </p>
+      <p className="credibility-callout compact" role="note">
+        {CHAMPION_DISCLAIMER}{' '}
+        <Link className="country-link" to="/methods">
+          Methods
         </Link>
       </p>
       <div className="score-hero">

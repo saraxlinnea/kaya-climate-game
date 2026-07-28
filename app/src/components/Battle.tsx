@@ -1,20 +1,33 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { CountryOption, KayaRow } from '../types'
 import {
-  ACTIONS,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
   MAX_ACTION_USES,
   MAX_TURNS,
   MIN_AFFLUENCE,
   WIN_CO2,
+  isHailMary,
+  type ActionCategory,
   type ClimateAction,
 } from '../game/actions'
 import {
+  COMBAT_CHALLENGES,
+  battlePath,
+  challengeById,
+  isActionBanned,
+  rulesFromChallenge,
+} from '../game/challenges'
+import {
   actionUsesRemaining,
   applyAction,
+  crossedLimbThresholds,
   emissionsPressure,
+  endStateOneLiner,
   estimatedCo2Mt,
   FACTOR_LABELS,
+  limbMilestoneMessage,
   medianOf,
   previewAction,
   prosperityIndex,
@@ -22,6 +35,13 @@ import {
   type ActionPreview,
   type GameState,
 } from '../game/engine'
+import {
+  actionLowersFactor,
+  actionsInCategory,
+  cleanPowerElectrifyHint,
+  electrifyGridSynergyNote,
+  worstFactorKey,
+} from '../game/synergy'
 import { buildHistoryCompare } from '../game/historyCompare'
 import { buildRunReport } from '../game/reportCard'
 import { COMBAT_SCENARIOS } from '../game/scenarios'
@@ -44,44 +64,100 @@ function barWidth(value: number, scaleMax = 100): string {
   return `${Math.min(100, Math.max(0, (value / scaleMax) * 100))}%`
 }
 
-const MAIN_ACTIONS = ACTIONS.filter((a) => !a.spicy)
-const HAIL_MARY_ACTIONS = ACTIONS.filter((a) => a.spicy)
+function prefersCoarsePointer(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia('(hover: none)').matches
+}
+
+const CATEGORY_BLURBS: Partial<Record<ActionCategory, string>> = {
+  clean_power: 'Cleaner electricity and fuels. Hits carbon intensity.',
+  efficiency: 'Use less energy per dollar of output.',
+  electrify: 'Shift cars and heat to electricity. Payoff follows the country’s grid data.',
+  demand: 'Use less energy-hungry stuff and activity.',
+  economy: 'Prices and growth. Watch prosperity.',
+  hail_mary: 'Big, risky, slow, or decoy ideas. Expand a card to see why.',
+}
 
 type ActionMoveProps = {
   action: ClimateAction
   state: GameState
   playing: boolean
   preview: ActionPreview | null
+  spotlight: boolean
+  highlight: boolean
+  banned: boolean
   onPreview: (actionId: string, preview: ActionPreview | null) => void
   onPlay: (actionId: string) => void
 }
 
-function ActionMove({ action, state, playing, preview, onPreview, onPlay }: ActionMoveProps) {
+function ActionMove({
+  action,
+  state,
+  playing,
+  preview,
+  spotlight,
+  highlight,
+  banned,
+  onPreview,
+  onPlay,
+}: ActionMoveProps) {
+  const [expanded, setExpanded] = useState(false)
   const left = actionUsesRemaining(state, action.id)
-  const exhausted = left <= 0
+  const exhausted = left <= 0 || banned
+  const synergy = electrifyGridSynergyNote(state, action.id)
 
   function showPreview() {
     if (!playing || exhausted) return
     onPreview(action.id, previewAction(state, action.id))
   }
 
+  function clearPreview() {
+    onPreview(action.id, null)
+  }
+
+  function handleClick() {
+    if (!playing || exhausted) return
+    if (prefersCoarsePointer() && !expanded) {
+      setExpanded(true)
+      showPreview()
+      return
+    }
+    setExpanded(false)
+    clearPreview()
+    onPlay(action.id)
+  }
+
+  const dimmed = spotlight && !highlight && !exhausted
+
   return (
     <button
       type="button"
-      className={`action-card compact${action.spicy ? ' spicy' : ''}${exhausted ? ' exhausted' : ''}`}
+      className={`action-card compact${isHailMary(action) ? ' spicy' : ''}${
+        exhausted ? ' exhausted' : ''
+      }${banned ? ' banned' : ''}${expanded ? ' expanded' : ''}${
+        highlight && spotlight ? ' spotlight-hit' : ''
+      }${dimmed ? ' spotlight-dim' : ''}`}
       disabled={!playing || exhausted}
+      aria-expanded={expanded}
       onMouseEnter={showPreview}
-      onMouseLeave={() => onPreview(action.id, null)}
+      onMouseLeave={() => {
+        if (!prefersCoarsePointer()) clearPreview()
+      }}
       onFocus={showPreview}
-      onBlur={() => onPreview(action.id, null)}
-      onClick={() => onPlay(action.id)}
+      onBlur={() => {
+        if (!prefersCoarsePointer()) {
+          clearPreview()
+          setExpanded(false)
+        }
+      }}
+      onClick={handleClick}
     >
       <span className="action-card-main">
         <strong>{action.name}</strong>
         <span className="action-target">
           {action.kayaTarget}
           {' · '}
-          {exhausted ? 'exhausted' : `${left} left`}
+          {banned ? 'locked' : exhausted ? 'exhausted' : `${left} left`}
         </span>
       </span>
       <span className="action-details">
@@ -92,13 +168,21 @@ function ActionMove({ action, state, playing, preview, onPreview, onPlay }: Acti
         <span className="action-realworld">
           <em>In the real world:</em> {action.realWorld}
         </span>
+        {synergy && (
+          <span className="action-synergy">
+            <em>Synergy:</em> {synergy}
+          </span>
+        )}
         {preview && (
           <span className="action-card-preview">
+            <span className="modeled-badge">Modeled estimate</span>
+            {' '}
             This turn: pressure {preview.pressureDelta >= 0 ? '+' : ''}
             {preview.pressureDelta.toFixed(1)}
             {' · prosperity '}
             {preview.prosperityDelta >= 0 ? '+' : ''}
             {preview.prosperityDelta.toFixed(1)}
+            {prefersCoarsePointer() && expanded ? ' · Tap again to play' : ''}
           </span>
         )}
       </span>
@@ -108,6 +192,16 @@ function ActionMove({ action, state, playing, preview, onPreview, onPlay }: Acti
 
 export function Battle({ countries, rows, iso }: Props) {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const challengeParam = params.get('challenge')
+  const challenge = useMemo(() => {
+    const c = challengeById(challengeParam)
+    if (!c) return undefined
+    // Challenge must match arena; otherwise ignore stale query
+    return c.iso === iso ? c : undefined
+  }, [challengeParam, iso])
+  const fightRules = useMemo(() => rulesFromChallenge(challenge), [challenge])
+
   const series = useMemo(() => seriesForCountry(rows, iso, 1965), [rows, iso])
   const seedRow = series.length ? series[series.length - 1] : null
 
@@ -141,21 +235,50 @@ export function Battle({ countries, rows, iso }: Props) {
     name: string
     preview: ActionPreview
   } | null>(null)
+  const [hitFlash, setHitFlash] = useState(false)
+  const [spotlight, setSpotlight] = useState(false)
+  const [milestone, setMilestone] = useState<string | null>(null)
+  const prevPressureRef = useRef<number | null>(null)
+
+  function seedFight() {
+    if (!seedRow) return null
+    return seedFromContext({
+      row: seedRow,
+      ...peerMedians,
+      historyStart,
+      historyEnd: seedRow,
+      rules: fightRules,
+    })
+  }
 
   useEffect(() => {
     if (!seedRow) {
       setState(null)
       return
     }
-    setState(
-      seedFromContext({
-        row: seedRow,
-        ...peerMedians,
-        historyStart,
-        historyEnd: seedRow,
-      }),
-    )
-  }, [iso, seedRow, historyStart, peerMedians])
+    setState(seedFight())
+    setHitFlash(false)
+    setMilestone(null)
+    prevPressureRef.current = 100
+    // If URL challenge points at another arena, jump there
+    const raw = challengeById(challengeParam)
+    if (raw && raw.iso !== iso) {
+      navigate(battlePath(raw.iso, raw.id), { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reseed on arena/challenge change
+  }, [iso, seedRow, historyStart, peerMedians, fightRules, challengeParam])
+
+  useEffect(() => {
+    if (!hitFlash) return
+    const id = window.setTimeout(() => setHitFlash(false), 480)
+    return () => window.clearTimeout(id)
+  }, [hitFlash])
+
+  useEffect(() => {
+    if (!milestone) return
+    const id = window.setTimeout(() => setMilestone(null), 3200)
+    return () => window.clearTimeout(id)
+  }, [milestone])
 
   usePageTitle(seedRow ? `Combat: ${seedRow.country}` : 'Combat: Kaya Climate')
 
@@ -174,16 +297,36 @@ export function Battle({ countries, rows, iso }: Props) {
     return COMBAT_SCENARIOS.filter((s) => isos.has(s.iso))
   }, [countries])
 
+  const activeScenario = availableScenarios.find((s) => s.iso === iso)
+
   function resetFight() {
     if (!seedRow) return
-    setState(
-      seedFromContext({
-        row: seedRow,
-        ...peerMedians,
-        historyStart,
-        historyEnd: seedRow,
-      }),
-    )
+    setHitFlash(false)
+    setMilestone(null)
+    prevPressureRef.current = 100
+    setState(seedFight())
+  }
+
+  function playMove(actionId: string) {
+    setHoverPreview(null)
+    setState((prev) => {
+      if (!prev) return prev
+      const before = emissionsPressure(prev)
+      const next = applyAction(prev, actionId)
+      const after = emissionsPressure(next)
+      const crossed = crossedLimbThresholds(before, after)
+      if (crossed.length) {
+        const lowest = crossed[crossed.length - 1]
+        setMilestone(limbMilestoneMessage(lowest))
+      }
+      prevPressureRef.current = after
+      return next
+    })
+    setHitFlash(true)
+  }
+
+  function selectChallenge(id: string | null) {
+    navigate(battlePath(iso, id))
   }
 
   if (!seedRow || !state) {
@@ -195,25 +338,57 @@ export function Battle({ countries, rows, iso }: Props) {
     )
   }
 
-  const pressure = emissionsPressure(state)
-  const prosperity = prosperityIndex(state)
-  const monsterScale = Math.max(0.72, Math.min(1.12, pressure / 100))
-  const playing = state.status === 'playing'
+  const fight = state
+  const pressure = emissionsPressure(fight)
+  const prosperity = prosperityIndex(fight)
+  const monsterScale = Math.max(1.55, Math.min(2.2, 1.2 + pressure / 140))
+  const playing = fight.status === 'playing'
   const meterColor = pressureFill(pressure)
-  const flag = flagEmoji(state.iso)
+  const flag = flagEmoji(fight.iso)
+  const worstKey = worstFactorKey(fight)
+  const electrifyHint = cleanPowerElectrifyHint(fight)
+  const turnCap = fight.rules.maxTurns
+  const whyLine = !playing ? endStateOneLiner(fight) : ''
+
+  function renderAction(action: ClimateAction) {
+    return (
+      <ActionMove
+        key={action.id}
+        action={action}
+        state={fight}
+        playing={playing}
+        preview={hoverPreview?.id === action.id ? hoverPreview.preview : null}
+        spotlight={spotlight}
+        highlight={actionLowersFactor(action, worstKey)}
+        banned={isActionBanned(action, fight.rules)}
+        onPreview={(id, next) => {
+          if (!next) {
+            setHoverPreview((prev) => (prev?.id === id ? null : prev))
+            return
+          }
+          setHoverPreview({ id, name: action.name, preview: next })
+        }}
+        onPlay={playMove}
+      />
+    )
+  }
 
   return (
-    <div className="app-shell page-enter">
-      <BrandHeader subtitle="Kaya Combat is a practice game. Pick a country, try policy moves, then compare your path to real history." />
+    <div className="app-shell page-enter battle-page">
+      <BrandHeader subtitle="Practice arena: policy moves on a CO₂ monster seeded from real country data." />
 
-      <section className="panel">
-        <div className="controls">
-          <div className="field">
-            <label htmlFor="battle-country">Country</label>
+      <p className="modeled-banner" role="note">
+        Modeled / satirical · Not a forecast or policy advice
+      </p>
+
+      <div className="battle-strip">
+        <div className="battle-strip-main">
+          <div className="field battle-strip-field">
+            <label htmlFor="battle-country">Arena</label>
             <select
               id="battle-country"
               value={iso}
-              onChange={(e) => navigate(`/battle/${e.target.value}`)}
+              onChange={(e) => navigate(battlePath(e.target.value))}
             >
               {countries.map((c) => {
                 const f = flagEmoji(c.iso_code)
@@ -225,20 +400,17 @@ export function Battle({ countries, rows, iso }: Props) {
               })}
             </select>
           </div>
-          <div className="field">
-            <label>Goal</label>
-            <div className="muted" style={{ padding: '0.65rem 0' }}>
-              Lower emissions pressure to {WIN_CO2} or less in {MAX_TURNS} turns. Keep prosperity at{' '}
-              {MIN_AFFLUENCE} or higher. You can use each move up to {MAX_ACTION_USES} times.
-            </div>
-          </div>
-        </div>
-
-        <div className="scenario-row" style={{ marginTop: '1rem' }}>
-          <p className="muted" style={{ margin: '0 0 0.5rem' }}>
-            Suggested countries
+          <p className="battle-goal-chip">
+            Pressure ≤ {WIN_CO2} · Prosperity ≥ {MIN_AFFLUENCE} · {turnCap} turns · max{' '}
+            {MAX_ACTION_USES} uses each
           </p>
-          <div className="filter-row">
+          <button type="button" className="filter-chip" onClick={resetFight}>
+            Reset
+          </button>
+        </div>
+        <details className="battle-country-details">
+          <summary>Change country / suggested arenas</summary>
+          <div className="filter-row" style={{ marginTop: '0.65rem' }}>
             {availableScenarios.map((s) => {
               const scenarioFlag = flagEmoji(s.iso)
               return (
@@ -247,39 +419,80 @@ export function Battle({ countries, rows, iso }: Props) {
                   type="button"
                   className={iso === s.iso ? 'filter-chip active' : 'filter-chip'}
                   title={s.blurb}
-                  onClick={() => navigate(`/battle/${s.iso}`)}
+                  onClick={() => navigate(battlePath(s.iso, challenge?.iso === s.iso ? challenge.id : null))}
                 >
                   {scenarioFlag ? `${scenarioFlag} ${s.label}` : s.label}
                 </button>
               )
             })}
           </div>
-          {availableScenarios.find((s) => s.iso === iso) && (
+          {activeScenario && (
             <p className="muted" style={{ marginTop: '0.55rem' }}>
-              {availableScenarios.find((s) => s.iso === iso)?.blurb}
+              {activeScenario.blurb}
+            </p>
+          )}
+        </details>
+        <div className="battle-challenge-row">
+          <p className="battle-challenge-label">Named challenges</p>
+          <div className="filter-row">
+            <button
+              type="button"
+              className={!challenge ? 'filter-chip active' : 'filter-chip'}
+              onClick={() => selectChallenge(null)}
+            >
+              Free play
+            </button>
+            {COMBAT_CHALLENGES.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={challenge?.id === c.id ? 'filter-chip active' : 'filter-chip'}
+                title={c.blurb}
+                onClick={() => navigate(battlePath(c.iso, c.id))}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+          {challenge ? (
+            <p className="panel-note" style={{ marginTop: '0.55rem', marginBottom: 0 }}>
+              {challenge.blurb}
+            </p>
+          ) : (
+            <p className="muted" style={{ marginTop: '0.55rem' }}>
+              Free play uses all moves and {MAX_TURNS} turns. Challenges lock moves or shorten the
+              clock.
             </p>
           )}
         </div>
-      </section>
+      </div>
 
-      <section className="panel monster-panel" style={{ marginTop: '1rem' }}>
-        <h1 className="panel-title">
-          CO₂ Monster: {flag ? `${flag} ` : ''}
-          {state.country}
-        </h1>
-        <p className="panel-note monster-seed-note">
-          This fight starts from {state.year} data ({state.baselineCo2Mt.toFixed(0)} Mt of CO₂). Energy
-          use and dirty energy start relative to other countries. Population and prosperity start at
-          100. Each turn also adds the usual growth this country has seen in history. The monster’s
-          color and limbs follow emissions pressure (not the Champion ranking score).
-        </p>
+      <section className="panel monster-panel" aria-labelledby="monster-title">
+        <div className="monster-panel-head">
+          <h1 id="monster-title" className="panel-title">
+            CO₂ Monster: {flag ? `${flag} ` : ''}
+            {state.country}
+          </h1>
+          <p className="monster-seed-note">
+            Seeded from {state.year} ({state.baselineCo2Mt.toFixed(0)} Mt). Color and limbs track
+            emissions pressure, not the Champion score.{' '}
+            <Link className="country-link" to={`/country/${iso}`}>
+              Explorer
+            </Link>
+          </p>
+        </div>
 
-        <div className="monster-arena">
-          <MonsterFigure pressure={pressure} scale={monsterScale} />
+        <div className={`monster-arena${hitFlash ? ' hit' : ''}`}>
+          <div className="monster-arena-stage">
+            <MonsterFigure pressure={pressure} scale={monsterScale} />
+          </div>
           <div className="monster-arena-stats">
             <div className="monster-meter">
               <div className="monster-meter-label">
-                <span>Emissions pressure</span>
+                <span>
+                  Emissions pressure{' '}
+                  <span className="modeled-badge">Modeled index</span>
+                </span>
                 <strong style={{ color: meterColor }}>{pressure.toFixed(0)}</strong>
               </div>
               <div className="score-track monster-co2-track">
@@ -289,10 +502,16 @@ export function Battle({ countries, rows, iso }: Props) {
                 />
               </div>
               <p className="muted">
-                About {estimatedCo2Mt(state).toFixed(0)} Mt implied · Prosperity {prosperity.toFixed(0)} ·
-                Turn {state.turn}/{MAX_TURNS}
+                ~{estimatedCo2Mt(state).toFixed(0)} Mt implied · Prosperity {prosperity.toFixed(0)} ·
+                Turn {state.turn}/{turnCap}
               </p>
             </div>
+
+            {milestone && (
+              <p className="limb-milestone" role="status" aria-live="polite">
+                {milestone}
+              </p>
+            )}
 
             <div className="health-bars">
               {(Object.keys(FACTOR_LABELS) as (keyof typeof FACTOR_LABELS)[]).map((key) => (
@@ -310,96 +529,93 @@ export function Battle({ countries, rows, iso }: Props) {
             </div>
           </div>
         </div>
-
-        <div className="battle-actions-row">
-          <button type="button" className="filter-chip" onClick={resetFight}>
-            Reset fight
-          </button>
-          <Link className="country-link" to={`/country/${iso}`}>
-            Open explorer
-          </Link>
-        </div>
       </section>
 
-      <section className="panel" style={{ marginTop: '1rem' }}>
-        <h2 className="panel-title">Policy moves</h2>
-        <p className="panel-note">
-          Hover or focus a card to see what it means, what it costs, and how pressure and prosperity
-          would change this turn (including usual growth). Moves get weaker if you repeat them. Max{' '}
-          {MAX_ACTION_USES} uses each. This is a learning game, not advice.
-        </p>
-        <div className="action-grid action-grid-compact">
-          {MAIN_ACTIONS.map((action) => (
-            <ActionMove
-              key={action.id}
-              action={action}
-              state={state}
-              playing={playing}
-              preview={hoverPreview?.id === action.id ? hoverPreview.preview : null}
-              onPreview={(id, next) => {
-                if (!next) {
-                  setHoverPreview((prev) => (prev?.id === id ? null : prev))
-                  return
-                }
-                setHoverPreview({ id, name: action.name, preview: next })
-              }}
-              onPlay={(id) => {
-                setHoverPreview(null)
-                setState((prev) => (prev ? applyAction(prev, id) : prev))
-              }}
-            />
-          ))}
-        </div>
+      {playing && (
+        <section className="panel battle-moves" style={{ marginTop: '1rem' }}>
+          <div className="battle-moves-head">
+            <div>
+              <h2 className="panel-title">Policy moves</h2>
+              <p className="panel-note">
+                Grouped by kind of lever. Tap or hover for tradeoffs and this turn’s modeled change.
+                Repeats get weaker.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={spotlight ? 'filter-chip active' : 'filter-chip'}
+              aria-pressed={spotlight}
+              onClick={() => setSpotlight((v) => !v)}
+              title={`Highlight moves that lower ${FACTOR_LABELS[worstKey]}`}
+            >
+              Spotlight: {FACTOR_LABELS[worstKey]}
+            </button>
+          </div>
+          {spotlight && (
+            <p className="panel-note spotlight-note">
+              Highlighting moves that lower the highest bar right now (
+              {FACTOR_LABELS[worstKey]}). Other cards are dimmed, not disabled.
+            </p>
+          )}
+          {electrifyHint && (
+            <p className="panel-note synergy-banner" role="note">
+              {electrifyHint}
+            </p>
+          )}
 
-        <h3 className="action-group-title">Hail mary moves</h3>
-        <p className="panel-note">
-          These are big, risky, or slow ideas. Hover to see why they often do not win by themselves.
-        </p>
-        <div className="action-grid action-grid-compact">
-          {HAIL_MARY_ACTIONS.map((action) => (
-            <ActionMove
-              key={action.id}
-              action={action}
-              state={state}
-              playing={playing}
-              preview={hoverPreview?.id === action.id ? hoverPreview.preview : null}
-              onPreview={(id, next) => {
-                if (!next) {
-                  setHoverPreview((prev) => (prev?.id === id ? null : prev))
-                  return
-                }
-                setHoverPreview({ id, name: action.name, preview: next })
-              }}
-              onPlay={(id) => {
-                setHoverPreview(null)
-                setState((prev) => (prev ? applyAction(prev, id) : prev))
-              }}
-            />
-          ))}
-        </div>
-      </section>
+          {CATEGORY_ORDER.map((category) => {
+            const group = actionsInCategory(category)
+            if (group.length === 0) return null
+            return (
+              <div className="action-category" key={category}>
+                <h3 className="action-group-title">{CATEGORY_LABELS[category]}</h3>
+                {CATEGORY_BLURBS[category] && (
+                  <p className="panel-note action-category-blurb">{CATEGORY_BLURBS[category]}</p>
+                )}
+                <div className="action-grid action-grid-compact">{group.map(renderAction)}</div>
+              </div>
+            )
+          })}
+        </section>
+      )}
 
       {!playing && (
-        <section className="panel" style={{ marginTop: '1rem' }}>
-          <h2 className="panel-title">Resolution</h2>
+        <section className="panel battle-result" style={{ marginTop: '1rem' }} aria-live="polite">
+          <p className="battle-result-kicker">Fight over</p>
           {state.status === 'won' && (
-            <p className="battle-banner win">
-              Victory. You cut emissions pressure to {pressure.toFixed(0)} (need {WIN_CO2} or less)
-              while keeping prosperity at {prosperity.toFixed(0)} (need {MIN_AFFLUENCE} or more).
-            </p>
+            <>
+              <h2 className="battle-result-title win">Victory</h2>
+              <p className="battle-result-lede">
+                You cut emissions pressure to {pressure.toFixed(0)} (need {WIN_CO2} or less) while
+                keeping prosperity at {prosperity.toFixed(0)}.
+              </p>
+            </>
           )}
           {state.status === 'lost_turns' && (
-            <p className="battle-banner lose">
-              Out of turns. Pressure finished at {pressure.toFixed(0)}; you needed {WIN_CO2} or less.
-              Usual growth outran your cuts.
-            </p>
+            <>
+              <h2 className="battle-result-title lose">Out of turns</h2>
+              <p className="battle-result-lede">
+                Pressure finished at {pressure.toFixed(0)}; you needed {WIN_CO2} or less.
+              </p>
+            </>
           )}
           {state.status === 'lost_economy' && (
-            <p className="battle-banner lose">
-              Prosperity fell to {prosperity.toFixed(0)} (floor {MIN_AFFLUENCE}). Making people much
-              poorer is not the win.
-            </p>
+            <>
+              <h2 className="battle-result-title lose">Prosperity collapsed</h2>
+              <p className="battle-result-lede">
+                Prosperity fell to {prosperity.toFixed(0)} (floor {MIN_AFFLUENCE}).
+              </p>
+            </>
           )}
+          {whyLine && <p className="battle-why">{whyLine}</p>}
+          <div className="hero-ctas" style={{ marginTop: '1.1rem' }}>
+            <Link className="btn-primary" to={`/country/${iso}`}>
+              Open explorer for {state.country}
+            </Link>
+            <button type="button" className="btn-ghost" onClick={resetFight}>
+              {challenge ? 'Fight again with same challenge' : 'Fight again'}
+            </button>
+          </div>
         </section>
       )}
 
@@ -418,8 +634,8 @@ export function Battle({ countries, rows, iso }: Props) {
       <section className="panel" style={{ marginTop: '1rem' }}>
         <h2 className="panel-title">Battle log</h2>
         <p className="panel-note">
-          Each turn shows how pressure and prosperity changed, which bars moved after usual growth,
-          and what the move means in the game and in real life.
+          Each turn: pressure and prosperity changes, bar moves after usual growth, and what the move
+          means in the game versus real life.
         </p>
         <ul className="battle-log">
           {[...state.log].reverse().map((line, i) => (

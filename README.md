@@ -2,6 +2,25 @@
 
 Exploring the Kaya identity and climate data.
 
+## Build status (what works today)
+
+**Live site:** [https://saraxlinnea.github.io/kaya-climate-game/](https://saraxlinnea.github.io/kaya-climate-game/)
+
+| Surface | Status | What a visitor can do |
+| --- | --- | --- |
+| Data pipeline (`src/`) | Complete | Reproducible OWID + Ember → Kaya CSVs. Demo CSVs ship in `app/public/data/` so the site runs without re-downloading. |
+| Country explorer | Complete | Charts, narrative, score for a country |
+| Compare / map / rankings / methods | Complete | Side-by-side pairs, world map, leaderboard, sources and scoring |
+| Kaya Combat (`/battle/:iso`) | Playable; polish and labeling in progress | Country-seeded toy policy game. Pressure, bars, and move effects are **modeled / satirical**, not forecasts. Sparse or cartoonish UI is unfinished polish, not a failed data load. |
+
+**Demo links (open on the live site):**
+
+- Explorer: [`/country/USA`](https://saraxlinnea.github.io/kaya-climate-game/country/USA)
+- Compare: [`/compare?a=USA&b=CHN`](https://saraxlinnea.github.io/kaya-climate-game/compare?a=USA&b=CHN)
+- Combat: [`/battle/USA`](https://saraxlinnea.github.io/kaya-climate-game/battle/USA)
+
+Those same paths are linked from the homepage.
+
 ## Project structure
 
 ```
@@ -11,6 +30,9 @@ kaya-climate-game/
 │   └── processed/    # Cleaned / derived datasets
 ├── notebooks/        # Exploratory analysis
 ├── src/              # Data download, cleaning, and Kaya calculations
+├── tests/            # pytest for pipeline math / validation
+├── test/             # Node citation + credibility checks
+├── research/         # claims inventory (credibility)
 └── app/              # React + Vite country explorer
 ```
 
@@ -57,23 +79,34 @@ npm run dev
 Open the local URL (usually http://localhost:5173). Routes:
 
 - `/` — landing
-- `/country/:iso` — explorer for that ISO3 code
+- `/country/:iso` — explorer for that ISO3 code (try `/country/USA`)
 - `/compare` — side-by-side country trajectories (`?a=USA&b=CHN`)
 - `/map` — world choropleth of Kaya Champion scores (click a country → explorer)
 - `/rankings` — Kaya Champion leaderboard (filter by decoupling, CO₂ cut, prosperity, efficiency, clean energy)
-- `/battle/:iso` — Kaya Combat mini-game (satirical policy levers + tradeoffs)
+- `/battle/:iso` — Kaya Combat mini-game (modeled / satirical policy levers; not forecasts)
 - `/methods` — data sources, scoring, limitations
 
 Explorer shows metrics, CO₂ timeline (territorial / consumption when available), indexed Kaya factors, log decomposition, auto narrative, territorial-vs-consumption story when data exist, and Kaya Score when eligible.
+
+## Tests
+
+```bash
+# Pipeline math (no network; tiny fixtures)
+pytest
+
+# Every dataset URL cited in DATA_SOURCES.md must appear in app/, src/, or Methods
+node --test test/citations.test.js
+```
+
+CI runs the app build, pytest, and the Node citation test on push/PR.
 
 ## Deploy (GitHub Pages)
 
 Workflows:
 
-- `.github/workflows/ci.yml` — `npm run build` on push/PR
+- `.github/workflows/ci.yml` — app build, pytest, citation test on push/PR
 - `.github/workflows/deploy-pages.yml` — build with `VITE_BASE=/kaya-climate-game/` and publish
 
 One-time repo setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
 Live URL (after first successful deploy): `https://saraxlinnea.github.io/kaya-climate-game/`
-

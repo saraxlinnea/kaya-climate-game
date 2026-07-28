@@ -11,7 +11,8 @@ export function HistoryComparePanel({ compare }: Props) {
       <h2 className="panel-title">Your run vs history</h2>
       <p className="panel-note">
         Player path ({compare.playerWindow}) vs real recorded change ({compare.historyWindow}).
-        Illustrative only. Not a detailed forecast.
+        Your column is a <span className="modeled-badge">Modeled estimate</span>
+        {' '}from the toy fight. History is real data. Illustrative only. Not a detailed forecast.
       </p>
 
       <table className="compare-table">

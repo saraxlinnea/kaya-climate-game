@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { ScoreRow } from '../types'
+import { CHAMPION_DISCLAIMER, SITE_METHOD_BADGE } from '../lib/credibility'
 import { explainRank, type RankSortKey } from '../lib/rankExplain'
 import { usePageTitle } from '../lib/usePageTitle'
 import { BrandHeader } from './BrandHeader'
@@ -77,9 +78,15 @@ export function Leaderboard({ scores }: Props) {
       <section className="panel">
         <h1 className="panel-title">Kaya Champion rankings</h1>
         <p className="panel-note">
-          Window {windowLabel}. Click a row for a short explanation of the rank. Transition economies
-          often place high after 2000 because efficiency and growth both improved. That is a feature
-          of the method, not an error.
+          <span className="modeled-badge">{SITE_METHOD_BADGE}</span> Window {windowLabel}. Click a
+          row for a short explanation of the rank. Transition economies often place high after 2000
+          because efficiency and growth both improved. That is a feature of the method, not an error.
+        </p>
+        <p className="credibility-callout compact" role="note">
+          {CHAMPION_DISCLAIMER}{' '}
+          <Link className="country-link" to="/methods">
+            Methods
+          </Link>
         </p>
 
         <div className="filter-row" role="tablist" aria-label="Ranking mode">

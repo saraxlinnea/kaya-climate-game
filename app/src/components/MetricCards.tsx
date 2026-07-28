@@ -207,8 +207,11 @@ export function NarrativePanel({ series }: Props) {
   const end = series[series.length - 1]
 
   return (
-    <section className="panel">
-      <h2 className="panel-title">What changed in the data</h2>
+    <section className="panel explorer-story" aria-labelledby="story-title">
+      <h2 id="story-title" className="panel-title">
+        Emissions changed because…
+      </h2>
+      <p className="narrative-result narrative-result-lead">{narrative.result}</p>
       <p className="panel-note">
         From {start.year} to {end.year}, using territorial CO₂. These bullets describe the four
         Kaya identity factors. They do not claim those are the only things that move emissions.
@@ -218,7 +221,6 @@ export function NarrativePanel({ series }: Props) {
           <li key={b}>{b}</li>
         ))}
       </ul>
-      <p className="narrative-result">{narrative.result}</p>
     </section>
   )
 }
