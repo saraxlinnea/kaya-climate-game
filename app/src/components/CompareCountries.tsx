@@ -100,10 +100,51 @@ function Cell({
   return (
     <tr>
       <th scope="row">{label}</th>
-      <td className={better === 'left' ? 'col-active' : undefined}>{left}</td>
-      <td className={better === 'right' ? 'col-active' : undefined}>{right}</td>
+      <td
+        className={
+          better === 'left' ? 'col-active' : better === 'tie' ? 'col-tie' : undefined
+        }
+      >
+        {left}
+      </td>
+      <td
+        className={
+          better === 'right' ? 'col-active' : better === 'tie' ? 'col-tie' : undefined
+        }
+      >
+        {right}
+      </td>
     </tr>
   )
+}
+
+function roundForCompare(value: number, digits: number): number {
+  const factor = 10 ** digits
+  return Math.round(value * factor) / factor
+}
+
+function betterLower(
+  left: number | null,
+  right: number | null,
+  digits = 0,
+): 'left' | 'right' | 'tie' | null {
+  if (left == null || right == null) return null
+  const L = roundForCompare(left, digits)
+  const R = roundForCompare(right, digits)
+  if (L === R) return 'tie'
+  return L < R ? 'left' : 'right'
+}
+
+function betterHigher(
+  left: number | null,
+  right: number | null,
+  digits = 0,
+): 'left' | 'right' | 'tie' | null {
+  if (left == null || right == null) return null
+  const L = roundForCompare(left, digits)
+  const R = roundForCompare(right, digits)
+  if (L === R) return 'tie'
+  return L > R ? 'left' : 'right'
 }
 
 export function CompareCountries({ countries, rows, scores }: Props) {
@@ -131,24 +172,6 @@ export function CompareCountries({ countries, rows, scores }: Props) {
     navigate(`/compare?a=${nextA}&b=${nextB}`, { replace: true })
   }
 
-  function betterLower(
-    left: number | null,
-    right: number | null,
-  ): 'left' | 'right' | 'tie' | null {
-    if (left == null || right == null) return null
-    if (Math.abs(left - right) < 0.5) return 'tie'
-    return left < right ? 'left' : 'right'
-  }
-
-  function betterHigher(
-    left: number | null,
-    right: number | null,
-  ): 'left' | 'right' | 'tie' | null {
-    if (left == null || right == null) return null
-    if (Math.abs(left - right) < 0.5) return 'tie'
-    return left > right ? 'left' : 'right'
-  }
-
   return (
     <div className="app-shell page-enter">
       <BrandHeader subtitle="Compare two countries on the same years. Look at how things changed, not only how they look today." />
@@ -158,8 +181,8 @@ export function CompareCountries({ countries, rows, scores }: Props) {
         <p className="panel-note">
           Percent changes since about 1990 (or the first complete year), plus latest levels.
           Highlight means “better” for that row: lower emissions or intensity, higher income or
-          Champion score. The Champion score rewards change since 2000. Emissions per person and
-          carbon per dollar of GDP are levels today.
+          Champion score. Near-equal rounded values show as a muted tie. The Champion score rewards
+          change since 2000. Emissions per person and carbon per dollar of GDP are levels today.
         </p>
         <div className="controls">
           <div className="field">
@@ -228,49 +251,49 @@ export function CompareCountries({ countries, rows, scores }: Props) {
                 label="CO₂ Δ (trajectory)"
                 left={formatPct(a.co2Pct, 0)}
                 right={formatPct(b.co2Pct, 0)}
-                better={betterLower(a.co2Pct, b.co2Pct)}
+                better={betterLower(a.co2Pct, b.co2Pct, 0)}
               />
               <Cell
                 label="GDP/capita Δ"
                 left={formatPct(a.gdpPcPct, 0)}
                 right={formatPct(b.gdpPcPct, 0)}
-                better={betterHigher(a.gdpPcPct, b.gdpPcPct)}
+                better={betterHigher(a.gdpPcPct, b.gdpPcPct, 0)}
               />
               <Cell
                 label="Energy intensity Δ"
                 left={formatPct(a.eiPct, 0)}
                 right={formatPct(b.eiPct, 0)}
-                better={betterLower(a.eiPct, b.eiPct)}
+                better={betterLower(a.eiPct, b.eiPct, 0)}
               />
               <Cell
                 label="Carbon intensity Δ"
                 left={formatPct(a.ciPct, 0)}
                 right={formatPct(b.ciPct, 0)}
-                better={betterLower(a.ciPct, b.ciPct)}
+                better={betterLower(a.ciPct, b.ciPct, 0)}
               />
               <Cell
                 label="Grid intensity (latest)"
                 left={a.gridEnd != null ? `${a.gridEnd.toFixed(0)} g/kWh` : '—'}
                 right={b.gridEnd != null ? `${b.gridEnd.toFixed(0)} g/kWh` : '—'}
-                better={betterLower(a.gridEnd, b.gridEnd)}
+                better={betterLower(a.gridEnd, b.gridEnd, 0)}
               />
               <Cell
                 label="Grid intensity Δ"
                 left={formatPct(a.gridPct, 0)}
                 right={formatPct(b.gridPct, 0)}
-                better={betterLower(a.gridPct, b.gridPct)}
+                better={betterLower(a.gridPct, b.gridPct, 0)}
               />
               <Cell
                 label="CO₂ per capita (level)"
                 left={`${a.co2PerCapita.toFixed(1)} t`}
                 right={`${b.co2PerCapita.toFixed(1)} t`}
-                better={betterLower(a.co2PerCapita, b.co2PerCapita)}
+                better={betterLower(a.co2PerCapita, b.co2PerCapita, 1)}
               />
               <Cell
                 label="CO₂ / GDP (level)"
                 left={`${a.co2PerGdp.toFixed(2)} Mt/$B`}
                 right={`${b.co2PerGdp.toFixed(2)} Mt/$B`}
-                better={betterLower(a.co2PerGdp, b.co2PerGdp)}
+                better={betterLower(a.co2PerGdp, b.co2PerGdp, 2)}
               />
               <Cell
                 label="Consumption − territorial"
@@ -284,7 +307,7 @@ export function CompareCountries({ countries, rows, scores }: Props) {
                 right={b.score ? b.score.kaya_score.toFixed(0) : '—'}
                 better={
                   a.score && b.score
-                    ? betterHigher(a.score.kaya_score, b.score.kaya_score)
+                    ? betterHigher(a.score.kaya_score, b.score.kaya_score, 0)
                     : null
                 }
               />

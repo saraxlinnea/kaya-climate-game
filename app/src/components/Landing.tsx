@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { COMBAT_SCENARIOS } from '../game/scenarios'
 import { COMPARE_STORIES } from '../lib/compareStories'
+import { publicUrl } from '../lib/publicUrl'
 import { usePageTitle } from '../lib/usePageTitle'
 import { SiteNav } from './BrandHeader'
 import { MonsterFigure } from './MonsterFigure'
@@ -23,6 +24,15 @@ export function Landing() {
       </header>
 
       <section className="hero-plane" aria-labelledby="hero-title">
+        <div className="hero-photo" aria-hidden>
+          <img
+            src={publicUrl('images/horizon-sunrise.jpg')}
+            alt=""
+            width={2400}
+            height={1600}
+            decoding="async"
+          />
+        </div>
         <div className="hero-visual" aria-hidden>
           <MonsterFigure pressure={100} scale={3.2} showHint={false} />
         </div>

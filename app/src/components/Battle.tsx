@@ -47,12 +47,16 @@ import { buildRunReport } from '../game/reportCard'
 import { COMBAT_SCENARIOS } from '../game/scenarios'
 import { flagEmoji } from '../lib/flagEmoji'
 import { seriesForCountry } from '../lib/loadData'
+import { publicUrl } from '../lib/publicUrl'
 import { usePageTitle } from '../lib/usePageTitle'
 import { BrandHeader } from './BrandHeader'
 import { HistoryComparePanel } from './HistoryComparePanel'
 import { MonsterFigure, pressureFill } from './MonsterFigure'
 import { RunReportPanel } from './RunReportPanel'
 import { SiteFooter } from './SiteFooter'
+
+/** Landing arena set: shared muted plate only (not per-country photos). */
+const FEATURED_ARENA_ISOS = new Set(['USA', 'CHN', 'FRA', 'POL', 'NOR', 'IND'])
 
 type Props = {
   countries: CountryOption[]
@@ -377,11 +381,30 @@ export function Battle({ countries, rows, iso }: Props) {
     <div className="app-shell page-enter battle-page">
       <BrandHeader subtitle="Practice arena: policy moves on a CO₂ monster seeded from real country data." />
 
-      <p className="modeled-banner" role="note">
-        Modeled / satirical · Not a forecast or policy advice
-      </p>
+      <div
+        className={
+          FEATURED_ARENA_ISOS.has(iso)
+            ? 'battle-header-plate battle-header-plate--photo'
+            : 'battle-header-plate'
+        }
+      >
+        {FEATURED_ARENA_ISOS.has(iso) && (
+          <div className="battle-header-photo" aria-hidden>
+            <img
+              src={publicUrl('images/earth-atmosphere.jpg')}
+              alt=""
+              width={2400}
+              height={1600}
+              decoding="async"
+            />
+          </div>
+        )}
+        <div className="battle-header-inner">
+          <p className="modeled-banner" role="note">
+            Modeled / satirical · Not a forecast or policy advice
+          </p>
 
-      <div className="battle-strip">
+          <div className="battle-strip">
         <div className="battle-strip-main">
           <div className="field battle-strip-field">
             <label htmlFor="battle-country">Arena</label>
@@ -464,6 +487,8 @@ export function Battle({ countries, rows, iso }: Props) {
               clock.
             </p>
           )}
+        </div>
+          </div>
         </div>
       </div>
 

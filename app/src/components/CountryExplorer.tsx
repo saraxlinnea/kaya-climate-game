@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import type { CountryOption, KayaRow, ScoreRow } from '../types'
 import { co2ChartAnnotations } from '../lib/narrative'
 import { seriesForCountry } from '../lib/loadData'
+import { publicUrl } from '../lib/publicUrl'
 import { usePageTitle } from '../lib/usePageTitle'
 import { BrandHeader } from './BrandHeader'
 import { EmissionsChart, FactorsChart } from './Charts'
@@ -44,7 +45,16 @@ export function CountryExplorer({ countries, rows, scores, iso }: Props) {
     <div className="app-shell page-enter explorer-page">
       <BrandHeader subtitle="Follow one country through four parts of emissions: people, income, energy use, and how dirty the energy is." />
 
-      <div className="page-band page-band-clay">
+      <div className="page-band page-band-clay page-band--photo page-band--photo-earth">
+        <div className="page-band-photo" aria-hidden>
+          <img
+            src={publicUrl('images/earth-atmosphere.jpg')}
+            alt=""
+            width={2400}
+            height={1600}
+            decoding="async"
+          />
+        </div>
         <div className="page-band-inner">
           <section className="panel explorer-controls">
             <div className="controls">

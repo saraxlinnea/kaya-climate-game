@@ -243,6 +243,7 @@ Build in this order. Do **not** build animations before the data is validated.
 - GitHub Actions CI + Pages deploy workflow
 - Infinity% guard (empty CSV → NaN; pctChange returns null); identity equation on landing; per-country math panel
 - Cited external context links; trajectory vs levels (CO₂/capita, CO₂/GDP) on explorer + Compare
+- Combat engine Vitest invariants + USA/FRA/POL/CHN balance smoke (`COMBAT_BALANCE.md`)
 
 ### Future / out of scope (ask before starting)
 

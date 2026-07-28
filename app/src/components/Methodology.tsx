@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { CHAMPION_DISCLAIMER, SITE_METHOD_BADGE } from '../lib/credibility'
+import { publicUrl } from '../lib/publicUrl'
 import { usePageTitle } from '../lib/usePageTitle'
 import { BrandHeader } from './BrandHeader'
 import { SiteFooter } from './SiteFooter'
@@ -10,7 +11,16 @@ export function Methodology() {
     <div className="app-shell methods-page">
       <BrandHeader subtitle="Where the numbers come from, and what they are not meant to prove." />
 
-      <div className="page-band page-band-clay">
+      <div className="page-band page-band-clay page-band--photo">
+        <div className="page-band-photo" aria-hidden>
+          <img
+            src={publicUrl('images/landscape-haze.jpg')}
+            alt=""
+            width={2400}
+            height={1591}
+            decoding="async"
+          />
+        </div>
         <div className="page-band-inner">
           <header className="panel methods-doc">
             <h1 className="panel-title">Methodology</h1>

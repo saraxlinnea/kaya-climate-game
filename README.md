@@ -96,15 +96,20 @@ pytest
 
 # Every dataset URL cited in DATA_SOURCES.md must appear in app/, src/, or Methods
 node --test test/citations.test.js
+
+# Kaya Combat engine invariants + light balance smoke (demo CSV)
+cd app && npm test
 ```
 
-CI runs the app build, pytest, and the Node citation test on push/PR.
+CI runs the app build, app combat tests, pytest, and the Node citation test on push/PR.
+
+Combat difficulty notes: [`COMBAT_BALANCE.md`](COMBAT_BALANCE.md).
 
 ## Deploy (GitHub Pages)
 
 Workflows:
 
-- `.github/workflows/ci.yml` — app build, pytest, citation test on push/PR
+- `.github/workflows/ci.yml` — app build, combat Vitest, pytest, citation test on push/PR
 - `.github/workflows/deploy-pages.yml` — build with `VITE_BASE=/kaya-climate-game/` and publish
 
 One-time repo setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
