@@ -44,8 +44,8 @@ export function Landing() {
             Fight the CO₂ monster
           </h1>
           <p className="hero-lede">
-            A satirical combat game seeded with real country data, plus a serious explorer for why
-            emissions rise or fall.
+            Named for the Kaya identity: CO₂ as people × income × energy use × how dirty that energy
+            is. Play a satirical combat game seeded with real country data, or dig into the explorer.
           </p>
           <div className="hero-ctas">
             <Link className="btn-primary" to="/battle/USA">

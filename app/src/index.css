@@ -31,6 +31,10 @@
   box-sizing: border-box;
 }
 
+html {
+  font-size: 17px;
+}
+
 html,
 body,
 #root {
@@ -336,7 +340,7 @@ input {
   max-width: 28rem;
   margin: 0;
   color: var(--ink-muted);
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.45;
 }
 
@@ -361,7 +365,7 @@ input {
 .panel-note {
   margin: 0 0 1rem;
   color: var(--ink-muted);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 .monster-seed-note {
@@ -718,7 +722,7 @@ input {
 
 .muted {
   color: var(--ink-muted);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
 .site-nav {
@@ -729,7 +733,7 @@ input {
 }
 
 .site-nav a {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -768,7 +772,7 @@ input {
 .rank-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1005,8 +1009,12 @@ tr.rank-open td {
 }
 
 .monster-figure-wrap.limp .monster-figure {
-  transform: rotate(-4deg);
+  transform: rotate(-6deg);
   transform-origin: center bottom;
+}
+
+.monster-figure-wrap.menace .monster-figure {
+  filter: drop-shadow(0 10px 18px rgba(16, 36, 31, 0.28));
 }
 
 .monster-figure {
@@ -1018,18 +1026,30 @@ tr.rank-open td {
 
 .monster-part {
   fill: var(--monster-fill, #c45a1a);
+  stroke: none;
   transition: fill 0.4s ease, opacity 0.35s ease;
   transform-box: fill-box;
   transform-origin: center;
 }
 
+.monster-plume-puff {
+  fill: rgba(16, 36, 31, 0.22);
+  stroke: none;
+}
+
+.monster-figure-wrap.menace .monster-plume-puff {
+  fill: rgba(16, 36, 31, 0.38);
+}
+
 .monster-eye-dot {
   fill: #eef3f1;
+  stroke: none;
 }
 
 .monster-mouth-bar {
   fill: #10241f;
-  opacity: 0.55;
+  stroke: none;
+  opacity: 0.65;
 }
 
 .monster-figure-hint {

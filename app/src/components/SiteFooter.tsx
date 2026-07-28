@@ -4,11 +4,11 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <p>
-        Data via{' '}
+        Named for Yoichi Kaya’s identity, which splits CO₂ into four measurable parts. Data via{' '}
         <a href="https://ourworldindata.org/" target="_blank" rel="noreferrer">
           Our World in Data
         </a>
-        . The Kaya identity helps show how several parts work together, not one single cause.
+        . The equation helps show how several parts work together, not one single cause.
       </p>
       <p>
         <Link to="/methods">Methods</Link>

@@ -25,6 +25,8 @@ export function Methodology() {
           <header className="panel methods-doc">
             <h1 className="panel-title">Methodology</h1>
             <p className="panel-note">
+              Kaya Climate is named for Yoichi Kaya’s identity: an accounting split of CO₂ into
+              population, income per person, energy per dollar of output, and CO₂ per unit of energy.
               This page is the short version for readers. Full scoring rules live in the repository
               files <code>SCORING.md</code> and <code>DATA_SOURCES.md</code>. Claim inventory:{' '}
               <code>research/claims.md</code>.
